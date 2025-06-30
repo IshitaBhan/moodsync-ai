@@ -988,15 +988,503 @@
             updateStatus('✅ Analysis stopped. Models remain loaded for quick restart.', 'loading');
         }
 
-        // Connect to Spotify
-        function connectSpotify() {
-            alert(`🎧 Spotify Integration Demo\n\nIn a real implementation, this would:\n1. Redirect to Spotify OAuth\n2. Get your listening history\n3. Analyze your music preferences\n4. Provide personalized recommendations\n\nFor now, showing demo recommendations based on your detected mood: ${currentEmotion}`);
+        // Spotify OAuth configuration
+        const SPOTIFY_CONFIG = {
+            clientId: 'e642820d6fd04ac699ad222cb2e9ad08', // Your Spotify app client ID
+            redirectUri: window.location.origin + '/callback',
+            scopes: [
+                'playlist-modify-public',
+                'playlist-modify-private', 
+                'user-read-private',
+                'user-read-email',
+                'user-top-read',
+                'user-read-recently-played'
+            ]
+        };
+
+        // YouTube API configuration  
+        const YOUTUBE_CONFIG = {
+            apiKey: 'AIzaSyAQVN2fm7KB6qsLKidp2n2veUKhpYrEFHI', // Your YouTube Data API key
+            discoveryDoc: 'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
+        };
+
+        let spotifyAccessToken = null;
+        let youtubeAPI = null;
+
+        // Real Spotify OAuth integration
+        async function connectSpotify() {
+            try {
+                // Check if already connected
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                
+                if (code) {
+                    // Exchange code for access token
+                    await exchangeSpotifyCode(code);
+                    return;
+                }
+
+                // Start OAuth flow
+                const authUrl = `https://accounts.spotify.com/authorize?` +
+                    `client_id=${SPOTIFY_CONFIG.clientId}&` +
+                    `response_type=code&` +
+                    `redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}&` +
+                    `scope=${encodeURIComponent(SPOTIFY_CONFIG.scopes.join(' '))}`;
+                
+                window.location.href = authUrl;
+                
+            } catch (error) {
+                console.error('Spotify connection error:', error);
+                alert('Error connecting to Spotify. Please check your configuration.');
+            }
+        }
+
+        // Exchange authorization code for access token
+        async function exchangeSpotifyCode(code) {
+            try {
+                // In production, this should be done on your backend server
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code: code,
+                        redirect_uri: SPOTIFY_CONFIG.redirectUri,
+                        client_id: SPOTIFY_CONFIG.clientId,
+                        // Note: In production, client_secret should be handled server-side
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    spotifyAccessToken = data.access_token;
+                    
+                    // Update UI
+                    document.getElementById('spotifyConnect').textContent = '✅ Connected to Spotify';
+                    document.getElementById('spotifyConnect').disabled = true;
+                    
+                    // Get user's music taste for better recommendations
+                    await analyzeUserMusicTaste();
+                    
+                    // Clear URL parameters
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (error) {
+                console.error('Token exchange error:', error);
+            }
+        }
+
+        // Analyze user's music taste using Spotify API
+        async function analyzeUserMusicTaste() {
+            if (!spotifyAccessToken) return;
+
+            try {
+                // Get user's top tracks
+                const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term', {
+                    headers: {
+                        'Authorization': `Bearer ${spotifyAccessToken}`
+                    }
+                });
+
+                if (topTracksResponse.ok) {
+                    const topTracks = await topTracksResponse.json();
+                    
+                    // Analyze audio features
+                    const trackIds = topTracks.items.map(track => track.id).join(',');
+                    const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+                        headers: {
+                            'Authorization': `Bearer ${spotifyAccessToken}`
+                        }
+                    });
+
+                    if (featuresResponse.ok) {
+                        const features = await featuresResponse.json();
+                        const musicProfile = analyzeMusicProfile(features.audio_features);
+                        
+                        document.getElementById('musicPersonality').innerHTML = 
+                            `✅ Your music DNA: ${musicProfile.energy > 0.6 ? 'High Energy' : 'Chill'} • ` +
+                            `${musicProfile.valence > 0.6 ? 'Positive' : 'Moody'} • ` +
+                            `${musicProfile.danceability > 0.6 ? 'Dance-focused' : 'Listening-focused'}`;
+                    }
+                }
+            } catch (error) {
+                console.error('Music taste analysis error:', error);
+            }
+        }
+
+        // Analyze user's music profile
+        function analyzeMusicProfile(audioFeatures) {
+            const validFeatures = audioFeatures.filter(f => f !== null);
             
-            document.getElementById('spotifyConnect').textContent = '✅ Connected to Spotify';
-            document.getElementById('spotifyConnect').disabled = true;
+            if (validFeatures.length === 0) {
+                return { energy: 0.5, valence: 0.5, danceability: 0.5 };
+            }
+
+            const avgEnergy = validFeatures.reduce((sum, f) => sum + f.energy, 0) / validFeatures.length;
+            const avgValence = validFeatures.reduce((sum, f) => sum + f.valence, 0) / validFeatures.length;
+            const avgDanceability = validFeatures.reduce((sum, f) => sum + f.danceability, 0) / validFeatures.length;
+
+            return {
+                energy: avgEnergy,
+                valence: avgValence,
+                danceability: avgDanceability
+            };
+        }
+
+        // Create real Spotify playlist based on emotion
+        async function createSpotifyPlaylist(emotion) {
+            if (!spotifyAccessToken) {
+                alert('Please connect to Spotify first!');
+                return null;
+            }
+
+            try {
+                // Get user profile
+                const profileResponse = await fetch('https://api.spotify.com/v1/me', {
+                    headers: {
+                        'Authorization': `Bearer ${spotifyAccessToken}`
+                    }
+                });
+
+                if (!profileResponse.ok) throw new Error('Failed to get user profile');
+                
+                const profile = await profileResponse.json();
+
+                // Create playlist
+                const playlistName = `MoodSync: ${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Vibes`;
+                const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${profile.id}/playlists`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${spotifyAccessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: playlistName,
+                        description: `AI-generated playlist based on detected ${emotion} emotion using FaceAPI.js`,
+                        public: false
+                    })
+                });
+
+                if (!playlistResponse.ok) throw new Error('Failed to create playlist');
+                
+                const playlist = await playlistResponse.json();
+
+                // Search for tracks based on emotion
+                const tracks = await searchSpotifyTracksByEmotion(emotion);
+                
+                if (tracks.length > 0) {
+                    // Add tracks to playlist
+                    const trackUris = tracks.slice(0, 20).map(track => track.uri); // Max 20 tracks
+                    
+                    await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${spotifyAccessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            uris: trackUris
+                        })
+                    });
+                }
+
+                return playlist;
+
+            } catch (error) {
+                console.error('Playlist creation error:', error);
+                return null;
+            }
+        }
+
+        // Search Spotify tracks by emotion
+        async function searchSpotifyTracksByEmotion(emotion) {
+            const emotionKeywords = {
+                'happy': ['happy', 'upbeat', 'energetic', 'party', 'dance', 'celebration'],
+                'sad': ['sad', 'melancholy', 'heartbreak', 'emotional', 'ballad', 'slow'],
+                'angry': ['angry', 'rage', 'rock', 'metal', 'aggressive', 'intense'],
+                'surprised': ['unexpected', 'electronic', 'experimental', 'unique', 'weird'],
+                'fearful': ['calm', 'peaceful', 'relaxing', 'anxiety relief', 'meditation'],
+                'disgusted': ['alternative', 'grunge', 'dark', 'industrial', 'underground'],
+                'neutral': ['chill', 'ambient', 'focus', 'study', 'background', 'instrumental']
+            };
+
+            const keywords = emotionKeywords[emotion] || emotionKeywords['neutral'];
+            const tracks = [];
+
+            try {
+                for (const keyword of keywords.slice(0, 3)) { // Search top 3 keywords
+                    const response = await fetch(
+                        `https://api.spotify.com/v1/search?q=${encodeURIComponent(keyword)}&type=track&limit=10`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${spotifyAccessToken}`
+                            }
+                        }
+                    );
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        tracks.push(...data.tracks.items);
+                    }
+                }
+
+                // Remove duplicates and shuffle
+                const uniqueTracks = tracks.filter((track, index, self) => 
+                    index === self.findIndex(t => t.id === track.id)
+                );
+                
+                return shuffleArray(uniqueTracks);
+
+            } catch (error) {
+                console.error('Spotify search error:', error);
+                return [];
+            }
+        }
+
+        // Initialize YouTube API
+        async function initializeYouTubeAPI() {
+            try {
+                if (typeof gapi !== 'undefined') {
+                    await new Promise(resolve => gapi.load('client', resolve));
+                    await gapi.client.init({
+                        apiKey: YOUTUBE_CONFIG.apiKey,
+                        discoveryDocs: [YOUTUBE_CONFIG.discoveryDoc]
+                    });
+                    youtubeAPI = gapi.client.youtube;
+                    console.log('YouTube API initialized');
+                }
+            } catch (error) {
+                console.error('YouTube API initialization error:', error);
+            }
+        }
+
+        // Search YouTube for emotion-based playlists
+        async function searchYouTubePlaylistsByEmotion(emotion) {
+            if (!youtubeAPI) {
+                console.warn('YouTube API not initialized');
+                return [];
+            }
+
+            try {
+                const query = `${emotion} music playlist`;
+                const response = await youtubeAPI.search.list({
+                    part: 'snippet',
+                    q: query,
+                    type: 'playlist',
+                    maxResults: 10
+                });
+
+                return response.result.items.map(item => ({
+                    id: item.id.playlistId,
+                    title: item.snippet.title,
+                    description: item.snippet.description,
+                    thumbnail: item.snippet.thumbnails.medium.url,
+                    channelTitle: item.snippet.channelTitle
+                }));
+
+            } catch (error) {
+                console.error('YouTube search error:', error);
+                return [];
+            }
+        }
+
+        // Updated music recommendations with real API integration
+        async function updateMusicRecommendations(emotion) {
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading recommendations...</div>';
+
+            try {
+                if (currentPlatform === 'spotify' && spotifyAccessToken) {
+                    // Get real Spotify recommendations
+                    const tracks = await searchSpotifyTracksByEmotion(emotion);
+                    displaySpotifyRecommendations(tracks.slice(0, 5));
+                    
+                } else if (currentPlatform === 'youtube' && youtubeAPI) {
+                    // Get real YouTube recommendations
+                    const playlists = await searchYouTubePlaylistsByEmotion(emotion);
+                    displayYouTubeRecommendations(playlists.slice(0, 5));
+                    
+                } else {
+                    // Fallback to demo recommendations
+                    const recommendations = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
+                    const currentRecs = recommendations[currentPlatform] || [];
+                    displayDemoRecommendations(currentRecs);
+                }
+            } catch (error) {
+                console.error('Recommendation error:', error);
+                recsList.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error loading recommendations</div>';
+            }
+        }
+
+        // Display Spotify recommendations
+        function displaySpotifyRecommendations(tracks) {
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '';
+
+            tracks.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.onclick = () => openSpotifyTrack(track.external_urls.spotify);
+                
+                item.innerHTML = `
+                    <div class="track-artwork">
+                        ${track.album.images.length > 0 ? 
+                            `<img src="${track.album.images[2]?.url || track.album.images[0].url}" 
+                                 style="width: 50px; height: 50px; border-radius: 6px;">` : 
+                            (index + 1)
+                        }
+                    </div>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artists.map(a => a.name).join(', ')}</div>
+                    </div>
+                    <div class="mood-match">Real ✓</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+        }
+
+        // Display YouTube recommendations
+        function displayYouTubeRecommendations(playlists) {
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '';
+
+            playlists.forEach((playlist, index) => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.onclick = () => openYouTubePlaylist(playlist.id);
+                
+                item.innerHTML = `
+                    <div class="track-artwork">
+                        <img src="${playlist.thumbnail}" 
+                             style="width: 50px; height: 50px; border-radius: 6px;">
+                    </div>
+                    <div class="track-info">
+                        <div class="track-name">${playlist.title}</div>
+                        <div class="track-artist">${playlist.channelTitle}</div>
+                    </div>
+                    <div class="mood-match">Real ✓</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+        }
+
+        // Display demo recommendations (fallback)
+        function displayDemoRecommendations(tracks) {
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '';
             
-            document.getElementById('musicPersonality').textContent = 'Connected! Analyzing your Spotify listening patterns with real emotion data...';
-            updateMusicRecommendations(currentEmotion);
+            tracks.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.onclick = () => playTrack(track, currentPlatform);
+                
+                item.innerHTML = `
+                    <div class="track-artwork">${index + 1}</div>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artist}</div>
+                    </div>
+                    <div class="mood-match">${track.match}</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+        }
+
+        // Open Spotify track
+        function openSpotifyTrack(url) {
+            window.open(url, '_blank');
+        }
+
+        // Open YouTube playlist
+        function openYouTubePlaylist(playlistId) {
+            const url = `https://www.youtube.com/playlist?list=${playlistId}`;
+            window.open(url, '_blank');
+        }
+
+        // Enhanced sync to music with real playlist creation
+        async function syncToMusic() {
+            if (!isRunning) {
+                alert('Please start emotion analysis first!');
+                return;
+            }
+            
+            if (currentPlatform === 'spotify' && spotifyAccessToken) {
+                // Create real Spotify playlist
+                const playlist = await createSpotifyPlaylist(currentEmotion);
+                if (playlist) {
+                    alert(`🎵 Real Spotify Playlist Created!\n\n"${playlist.name}"\n\nBased on your detected emotion: ${currentEmotion.toUpperCase()}\n\nOpening playlist in Spotify...`);
+                    window.open(playlist.external_urls.spotify, '_blank');
+                } else {
+                    alert('Failed to create playlist. Please check your Spotify connection.');
+                }
+            } else if (currentPlatform === 'youtube') {
+                // For YouTube, open search results
+                const query = `${currentEmotion} music playlist`;
+                const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+                window.open(url, '_blank');
+                alert(`🎵 Opening YouTube search for ${currentEmotion} music!`);
+            } else {
+                alert('Please connect to a music service first to create real playlists!');
+            }
+        }
+
+        // Utility function to shuffle array
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Load Google API for YouTube integration
+        function loadGoogleAPI() {
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = initializeYouTubeAPI;
+            document.head.appendChild(script);
+        }
+
+        // Initialize app with real API integrations
+        async function initializeApp() {
+            try {
+                console.log('Loading FaceAPI.js models...');
+                updateStatus('Loading pre-trained emotion recognition models...', 'loading');
+                
+                // Load FaceAPI.js models
+                const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+                
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                ]);
+
+                // Initialize UI
+                initializeEmotionGrid();
+                
+                // Load Google API for YouTube integration
+                loadGoogleAPI();
+                
+                // Check for Spotify callback
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('code')) {
+                    await exchangeSpotifyCode(urlParams.get('code'));
+                }
+
+                updateStatus('✅ Real ML emotion recognition ready! Connect music services for full integration.', 'active');
+                console.log('MoodSync fully initialized with real APIs');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                updateStatus('❌ Error loading models. Please refresh and try again.', 'error');
+            }
         }
 
         // Switch platform (Spotify/YouTube)
