@@ -1192,7 +1192,7 @@ To fix the "Invalid redirect URI" error:
             document.getElementById('musicPlatforms').textContent = 'Spotify setup required - add redirect URI to your app settings';
         }
 
-        // Enhanced Spotify connection with personalization
+        // Enhanced Spotify connection with personalization and debugging
         async function handleSpotifyCallback(code) {
             try {
                 const codeVerifier = localStorage.getItem('code_verifier');
@@ -1227,7 +1227,7 @@ To fix the "Invalid redirect URI" error:
                 await initializeSpotifyPlayer();
                 updateConnectButton('spotify', true);
 
-                // Analyze user profile for personalization
+                // Analyze user profile for personalization with debugging
                 await analyzeUserProfile();
 
             } catch (error) {
@@ -1236,20 +1236,374 @@ To fix the "Invalid redirect URI" error:
             }
         }
 
-        // Add personalization button to UI
+        // Enhanced user profile analysis with debugging
+        async function analyzeUserProfile() {
+            if (!accessToken) {
+                console.log('No Spotify access token available');
+                return false;
+            }
+
+            try {
+                updateStatus('🔄 Analyzing your music taste...', 'loading');
+
+                // Fetch user's top tracks (last 6 months)
+                console.log('🎵 Fetching your top tracks...');
+                const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topTracksResponse.ok) {
+                    const topTracksData = await topTracksResponse.json();
+                    userProfile.topTracks = topTracksData.items;
+                    console.log(`✅ Found ${userProfile.topTracks.length} top tracks:`, userProfile.topTracks.slice(0, 5).map(t => `${t.name} - ${t.artists[0].name}`));
+
+                    // Get audio features for top tracks
+                    const trackIds = userProfile.topTracks.map(track => track.id).join(',');
+                    console.log('🎶 Fetching audio features...');
+                    const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (featuresResponse.ok) {
+                        const featuresData = await featuresResponse.json();
+                        userProfile.audioFeatures = featuresData.audio_features;
+                        console.log('✅ Audio features received:', userProfile.audioFeatures.slice(0, 3));
+                        
+                        // Calculate user preferences from audio features
+                        calculateUserPreferences();
+                    }
+                }
+
+                // Fetch user's top artists
+                console.log('🎤 Fetching your top artists...');
+                const topArtistsResponse = await fetch('https://api.spotify.com/v1/me/top/artists?limit=20&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topArtistsResponse.ok) {
+                    const topArtistsData = await topArtistsResponse.json();
+                    userProfile.topArtists = topArtistsData.items;
+                    console.log(`✅ Found ${userProfile.topArtists.length} top artists:`, userProfile.topArtists.slice(0, 5).map(a => a.name));
+                }
+
+                // Fetch recently played tracks
+                console.log('⏱️ Fetching recently played...');
+                const recentResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (recentResponse.ok) {
+                    const recentData = await recentResponse.json();
+                    userProfile.recentlyPlayed = recentData.items;
+                    console.log(`✅ Found ${userProfile.recentlyPlayed.length} recent tracks`);
+                }
+
+                userProfile.isPersonalized = true;
+                generatePersonalizedRecommendations();
+                addPersonalizationControls();
+                showPersonalizationDebug();
+                
+                updateStatus('✅ Music taste analyzed! Recommendations personalized.', 'active');
+                document.getElementById('musicPlatforms').textContent = 
+                    `✨ Personalized with ${userProfile.topTracks.length} tracks analyzed! Click "Show Analysis" to see your data.`;
+                
+                return true;
+
+            } catch (error) {
+                console.error('Error analyzing user profile:', error);
+                updateStatus('⚠️ Using default recommendations', 'loading');
+                showPersonalizationError(error);
+                return false;
+            }
+        }
+
+        // Show detailed personalization debug panel
+        function showPersonalizationDebug() {
+            const debugPanel = document.createElement('div');
+            debugPanel.id = 'personalizationDebug';
+            debugPanel.style.cssText = `
+                background: white;
+                border: 2px solid #1db954;
+                border-radius: 10px;
+                padding: 15px;
+                margin: 15px 0;
+                font-size: 0.9em;
+                display: none;
+            `;
+
+            const topGenres = extractTopGenres();
+            const avgFeatures = userProfile.preferences;
+
+            debugPanel.innerHTML = `
+                <h4 style="color: #1db954; margin-bottom: 10px;">🔍 Your Music Analysis</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>📊 Your Audio Preferences:</strong><br>
+                        Happiness (Valence): ${(avgFeatures.valence * 100).toFixed(0)}%<br>
+                        Energy Level: ${(avgFeatures.energy * 100).toFixed(0)}%<br>
+                        Danceability: ${(avgFeatures.danceability * 100).toFixed(0)}%<br>
+                        Acoustic Preference: ${(avgFeatures.acousticness * 100).toFixed(0)}%<br>
+                        <small style="color: #666;">Based on your top ${userProfile.topTracks.length} tracks</small>
+                    </div>
+                    <div>
+                        <strong>🎵 Your Top Genres:</strong><br>
+                        ${topGenres.slice(0, 5).map((genre, i) => `${i + 1}. ${genre}`).join('<br>')}<br>
+                        <small style="color: #666;">From your top ${userProfile.topArtists.length} artists</small>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>🎧 Sample Tracks Analyzed:</strong><br>
+                    ${userProfile.topTracks.slice(0, 3).map(track => 
+                        `• ${track.name} - ${track.artists[0].name}`
+                    ).join('<br>')}<br>
+                    <small style="color: #666;">...and ${userProfile.topTracks.length - 3} more</small>
+                </div>
+                <button onclick="this.parentElement.style.display='none'" style="
+                    background: #1db954; 
+                    color: white; 
+                    border: none; 
+                    padding: 5px 10px; 
+                    border-radius: 4px; 
+                    margin-top: 10px;
+                    cursor: pointer;
+                ">Close Analysis</button>
+            `;
+
+            // Insert after recommendations panel
+            const recPanel = document.querySelector('.recommendations-panel');
+            recPanel.appendChild(debugPanel);
+        }
+
+        // Show personalization error details
+        function showPersonalizationError(error) {
+            const errorPanel = document.createElement('div');
+            errorPanel.style.cssText = `
+                background: #fff3cd;
+                border: 1px solid #ffeaa7;
+                border-radius: 8px;
+                padding: 10px;
+                margin: 10px 0;
+                font-size: 0.9em;
+            `;
+            errorPanel.innerHTML = `
+                <strong>⚠️ Personalization Status:</strong><br>
+                Using default recommendations because: ${error.message}<br>
+                <small>This might be due to insufficient listening history or API limitations.</small>
+            `;
+            
+            const recPanel = document.querySelector('.recommendations-panel');
+            recPanel.appendChild(errorPanel);
+        }
+
+        // Add personalization controls with debug button
         function addPersonalizationControls() {
             if (!accessToken) return;
 
             const recommendationsPanel = document.querySelector('.recommendations-panel');
+            
+            // Create control container
+            const controlsContainer = document.createElement('div');
+            controlsContainer.style.cssText = 'display: flex; gap: 10px; margin: 10px 0;';
+
+            // Personalization button
             const personalizationBtn = document.createElement('button');
             personalizationBtn.className = 'control-btn';
-            personalizationBtn.style.cssText = 'width: 100%; margin: 10px 0; background: linear-gradient(45deg, #1db954, #1ed760);';
-            personalizationBtn.innerHTML = '🎯 Personalize Recommendations';
+            personalizationBtn.style.cssText = 'flex: 1; background: linear-gradient(45deg, #1db954, #1ed760);';
+            personalizationBtn.innerHTML = '🔄 Re-analyze Taste';
             personalizationBtn.onclick = analyzeUserProfile;
+
+            // Debug button
+            const debugBtn = document.createElement('button');
+            debugBtn.className = 'control-btn';
+            debugBtn.style.cssText = 'flex: 1; background: linear-gradient(45deg, #667eea, #764ba2);';
+            debugBtn.innerHTML = '🔍 Show Analysis';
+            debugBtn.onclick = () => {
+                const debugPanel = document.getElementById('personalizationDebug');
+                if (debugPanel) {
+                    debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+                }
+            };
+
+            controlsContainer.appendChild(personalizationBtn);
+            controlsContainer.appendChild(debugBtn);
 
             // Insert after connect section
             const connectSection = document.querySelector('.connect-section');
-            connectSection.parentNode.insertBefore(personalizationBtn, connectSection.nextSibling);
+            connectSection.parentNode.insertBefore(controlsContainer, connectSection.nextSibling);
+        }
+
+        // Enhanced music recommendations with both Spotify and YouTube personalization
+        function updateMusicRecommendations(emotion) {
+            let tracks;
+            let isPersonalized = false;
+            let personalizationSource = '';
+
+            // Determine which personalized recommendations to use
+            if (currentPlatform === 'spotify' && userProfile.isPersonalized && personalizedRecommendations[emotion]) {
+                tracks = personalizedRecommendations[emotion];
+                isPersonalized = true;
+                personalizationSource = 'Spotify';
+            } else if (currentPlatform === 'youtube' && youtubeProfile.isPersonalized && youtubePersonalizedRecommendations[emotion]) {
+                tracks = youtubePersonalizedRecommendations[emotion];
+                isPersonalized = true;
+                personalizationSource = 'YouTube';
+            } else {
+                tracks = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
+            }
+            
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '';
+
+            // Add header showing personalization status
+            const headerDiv = document.createElement('div');
+            headerDiv.style.cssText = 'text-align: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ' + (currentPlatform === 'spotify' ? '#1db954' : '#ff0000') + ';';
+            
+            if (isPersonalized) {
+                const dataCount = currentPlatform === 'spotify' 
+                    ? userProfile.topTracks.length 
+                    : youtubeProfile.likedVideos.length + youtubeProfile.playlists.length;
+                    
+                headerDiv.innerHTML = `
+                    <strong style="color: ${currentPlatform === 'spotify' ? '#1db954' : '#ff0000'};">✨ Personalized for You</strong><br>
+                    <small style="color: #666;">Based on your ${personalizationSource} data • ${dataCount} items analyzed</small>
+                `;
+            } else {
+                headerDiv.innerHTML = `
+                    <strong style="color: #666;">🎵 Default Recommendations</strong><br>
+                    <small style="color: #666;">Connect ${currentPlatform === 'spotify' ? 'Spotify' : 'YouTube'} for personalized suggestions</small>
+                `;
+            }
+            recsList.appendChild(headerDiv);
+            
+            tracks.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.onclick = () => playTrack(track);
+                
+                // Show different indicators for different sources
+                let artworkContent, matchStyle;
+                
+                if (track.isUserTrack || track.isUserVideo) {
+                    artworkContent = currentPlatform === 'spotify' ? '💎' : '❤️';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d; font-weight: bold;';
+                } else if (isPersonalized && track.personalizedScore > 0.7) {
+                    artworkContent = '⭐';
+                    matchStyle = 'background: #fff3cd; color: #856404;';
+                } else {
+                    artworkContent = currentPlatform === 'spotify' ? '🎧' : '📺';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d;';
+                }
+
+                item.innerHTML = `
+                    <div class="track-artwork">${artworkContent}</div>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artist}</div>
+                        ${track.reason ? `<div style="font-size: 0.7em; color: #888; margin-top: 2px;">${track.reason}</div>` : ''}
+                        ${isPersonalized && track.personalizedScore ? 
+                            `<div style="font-size: 0.7em; color: ${currentPlatform === 'spotify' ? '#1db954' : '#ff0000'}; margin-top: 2px;">Similarity: ${(track.personalizedScore * 100).toFixed(0)}%</div>` : ''
+                        }
+                    </div>
+                    <div class="mood-match" style="${matchStyle}">${track.match}</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+
+            // Show legend
+            if (isPersonalized) {
+                const legendDiv = document.createElement('div');
+                legendDiv.style.cssText = 'text-align: center; color: #666; font-size: 0.8em; margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 6px;';
+                
+                if (currentPlatform === 'spotify') {
+                    legendDiv.innerHTML = '💎 Your music • ⭐ Perfect match • 🎧 Recommended';
+                } else {
+                    legendDiv.innerHTML = '❤️ Your videos • ⭐ Perfect match • 📺 Recommended';
+                }
+                recsList.appendChild(legendDiv);
+            }
+        }
+
+        // Enhanced platform switching with personalization support
+        function switchPlatform(platform) {
+            currentPlatform = platform;
+            
+            // Update tab styles
+            document.querySelectorAll('.platform-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-platform="${platform}"]`).classList.add('active');
+
+            // Show/hide player controls
+            document.getElementById('spotifyPlayerControls').style.display = 
+                platform === 'spotify' ? 'block' : 'none';
+            document.getElementById('youtubePlayerControls').style.display = 
+                platform === 'youtube' ? 'block' : 'none';
+            document.getElementById('youtubePlayerContainer').style.display = 
+                platform === 'youtube' && youtubeConnected ? 'block' : 'none';
+
+            // Update recommendations with platform-specific personalization
+            if (currentEmotion !== 'neutral') {
+                updateMusicRecommendations(currentEmotion);
+            }
+
+            // Update insights based on platform
+            updatePlatformSpecificInsights(platform);
+        }
+
+        // Update platform-specific insights
+        function updatePlatformSpecificInsights(platform) {
+            let insightText = '';
+            
+            if (platform === 'spotify' && userProfile.isPersonalized) {
+                const topGenres = extractTopGenres();
+                insightText = `Spotify connected with ${userProfile.topTracks.length} tracks. Top genres: ${topGenres.slice(0, 2).join(', ')} 🎧`;
+            } else if (platform === 'youtube' && youtubeProfile.isPersonalized) {
+                insightText = `YouTube connected with ${youtubeProfile.likedVideos.length} liked videos, ${youtubeProfile.playlists.length} playlists 📺`;
+            } else {
+                insightText = `Connect ${platform === 'spotify' ? 'Spotify Premium' : 'YouTube'} for personalized recommendations`;
+            }
+            
+            document.getElementById('musicPlatforms').textContent = insightText;
+        }.onclick = () => playTrack(track);
+                
+                // Show different indicators for different sources
+                let artworkContent, matchStyle;
+                
+                if (track.isUserTrack) {
+                    artworkContent = '💎';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d; font-weight: bold;';
+                } else if (userProfile.isPersonalized && track.personalizedScore > 0.7) {
+                    artworkContent = '⭐';
+                    matchStyle = 'background: #fff3cd; color: #856404;';
+                } else {
+                    artworkContent = currentPlatform === 'spotify' ? '🎧' : '📺';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d;';
+                }
+
+                item.innerHTML = `
+                    <div class="track-artwork">${artworkContent}</div>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artist}</div>
+                        ${track.reason ? `<div style="font-size: 0.7em; color: #888; margin-top: 2px;">${track.reason}</div>` : ''}
+                        ${userProfile.isPersonalized && track.personalizedScore ? 
+                            `<div style="font-size: 0.7em; color: #1db954; margin-top: 2px;">Similarity: ${(track.personalizedScore * 100).toFixed(0)}%</div>` : ''
+                        }
+                    </div>
+                    <div class="mood-match" style="${matchStyle}">${track.match}</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+
+            // Show legend
+            if (userProfile.isPersonalized) {
+                const legendDiv = document.createElement('div');
+                legendDiv.style.cssText = 'text-align: center; color: #666; font-size: 0.8em; margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 6px;';
+                legendDiv.innerHTML = '💎 Your music • ⭐ Perfect match • 🎧 Recommended';
+                recsList.appendChild(legendDiv);
+            }
         }
 
         // Enhanced emotion-based learning
@@ -1380,7 +1734,27 @@ To fix the "Invalid redirect URI" error:
             await spotifyPlayer.connect();
         }
 
-        // Connect to YouTube
+        // YouTube Data API configuration
+        const YOUTUBE_API_KEY = 'AIzaSyAQVN2fm7KB6qsLKidp2n2veUKhpYrEFHI';
+
+        // YouTube user profile and personalization
+        let youtubeProfile = {
+            playlists: [],
+            likedVideos: [],
+            subscribedChannels: [],
+            videoCategories: {},
+            preferences: {
+                musicGenres: [],
+                averageWatchTime: 0,
+                favoriteArtists: [],
+                topCategories: []
+            },
+            isPersonalized: false
+        };
+
+        let youtubePersonalizedRecommendations = {};
+
+        // Enhanced YouTube connection with personalization
         async function connectYouTube() {
             try {
                 updateStatus('🔄 Connecting to YouTube Music...', 'loading');
@@ -1390,15 +1764,458 @@ To fix the "Invalid redirect URI" error:
                     return;
                 }
 
-                youtubeConnected = true;
-                updateConnectButton('youtube', true);
-                document.getElementById('musicPlatforms').textContent = 'YouTube Music connected successfully! 📺';
-                updateStatus('✅ YouTube Music ready!', 'active');
-                document.getElementById('youtubePlayerContainer').classList.add('active');
+                // Start OAuth flow for YouTube
+                await initiateYouTubeOAuth();
 
             } catch (error) {
                 console.error('YouTube connection error:', error);
                 updateStatus('❌ Error connecting to YouTube Music', 'error');
+            }
+        }
+
+        // YouTube OAuth flow
+        async function initiateYouTubeOAuth() {
+            try {
+                // Check if we have a stored access token
+                const storedToken = localStorage.getItem('youtube_access_token');
+                if (storedToken) {
+                    youtubeAccessToken = storedToken;
+                    await analyzeYouTubeProfile();
+                    return;
+                }
+
+                // Initialize Google Auth
+                await loadGoogleAuth();
+                
+            } catch (error) {
+                console.error('YouTube OAuth error:', error);
+                // Fall back to basic connection without personalization
+                youtubeConnected = true;
+                updateConnectButton('youtube', true);
+                document.getElementById('musicPlatforms').textContent = 'YouTube Music connected (basic mode) 📺';
+                updateStatus('✅ YouTube Music ready!', 'active');
+                document.getElementById('youtubePlayerContainer').classList.add('active');
+            }
+        }
+
+        // Load Google Auth library
+        async function loadGoogleAuth() {
+            return new Promise((resolve) => {
+                if (window.gapi) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://apis.google.com/js/api.js';
+                script.onload = () => {
+                    window.gapi.load('auth2', () => {
+                        window.gapi.auth2.init({
+                            client_id: '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com', // You'll need to provide this
+                            scope: 'https://www.googleapis.com/auth/youtube.readonly'
+                        }).then(() => {
+                            resolve();
+                            authenticateYouTube();
+                        });
+                    });
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Authenticate with YouTube
+        async function authenticateYouTube() {
+            try {
+                const authInstance = window.gapi.auth2.getAuthInstance();
+                const user = await authInstance.signIn();
+                const authResponse = user.getAuthResponse();
+                
+                youtubeAccessToken = authResponse.access_token;
+                localStorage.setItem('youtube_access_token', youtubeAccessToken);
+                
+                youtubeConnected = true;
+                updateConnectButton('youtube', true);
+                updateStatus('✅ YouTube authenticated!', 'active');
+                
+                await analyzeYouTubeProfile();
+                
+            } catch (error) {
+                console.error('YouTube authentication failed:', error);
+                // Use simplified approach with API key only
+                await analyzeYouTubeProfileBasic();
+            }
+        }
+
+        // Analyze YouTube profile with full OAuth access
+        async function analyzeYouTubeProfile() {
+            if (!youtubeAccessToken) {
+                console.log('No YouTube access token available');
+                return false;
+            }
+
+            try {
+                updateStatus('🔄 Analyzing your YouTube Music taste...', 'loading');
+                console.log('🎵 Fetching YouTube data...');
+
+                // Get user's channel info
+                const channelResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&mine=true&access_token=${youtubeAccessToken}`
+                );
+
+                if (channelResponse.ok) {
+                    const channelData = await channelResponse.json();
+                    const channel = channelData.items[0];
+                    console.log('✅ Channel found:', channel.snippet.title);
+
+                    // Get user's playlists
+                    await fetchUserPlaylists();
+                    
+                    // Get liked videos
+                    await fetchLikedVideos(channel.contentDetails.relatedPlaylists.likes);
+                    
+                    // Get subscriptions (music channels)
+                    await fetchSubscriptions();
+                    
+                    // Analyze the data
+                    analyzeYouTubePreferences();
+                    generateYouTubePersonalizedRecommendations();
+                    
+                    youtubeProfile.isPersonalized = true;
+                    showYouTubePersonalizationDebug();
+                    
+                    updateStatus('✅ YouTube Music taste analyzed!', 'active');
+                    document.getElementById('musicPlatforms').textContent = 
+                        `✨ YouTube personalized with ${youtubeProfile.likedVideos.length} liked videos analyzed!`;
+                    
+                    return true;
+                }
+
+            } catch (error) {
+                console.error('Error analyzing YouTube profile:', error);
+                await analyzeYouTubeProfileBasic();
+                return false;
+            }
+        }
+
+        // Basic YouTube analysis using API key only
+        async function analyzeYouTubeProfileBasic() {
+            try {
+                updateStatus('🔄 Connecting to YouTube Music (basic mode)...', 'loading');
+                
+                // Use search API to find popular music videos and categorize by genres
+                const musicCategories = ['pop music', 'rock music', 'hip hop music', 'electronic music', 'country music', 'classical music'];
+                
+                for (const category of musicCategories) {
+                    const searchResponse = await fetch(
+                        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(category)}&type=video&videoCategoryId=10&maxResults=10&key=${YOUTUBE_API_KEY}`
+                    );
+                    
+                    if (searchResponse.ok) {
+                        const searchData = await searchResponse.json();
+                        youtubeProfile.videoCategories[category] = searchData.items;
+                    }
+                }
+
+                youtubeConnected = true;
+                updateConnectButton('youtube', true);
+                document.getElementById('musicPlatforms').textContent = 'YouTube Music connected (basic recommendations) 📺';
+                updateStatus('✅ YouTube Music ready!', 'active');
+                document.getElementById('youtubePlayerContainer').classList.add('active');
+                
+                console.log('✅ YouTube basic mode initialized');
+                
+            } catch (error) {
+                console.error('YouTube basic analysis error:', error);
+                updateStatus('⚠️ YouTube connection limited', 'loading');
+            }
+        }
+
+        // Fetch user's playlists
+        async function fetchUserPlaylists() {
+            try {
+                console.log('🎵 Fetching your playlists...');
+                const playlistResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50&access_token=${youtubeAccessToken}`
+                );
+
+                if (playlistResponse.ok) {
+                    const playlistData = await playlistResponse.json();
+                    youtubeProfile.playlists = playlistData.items;
+                    console.log(`✅ Found ${youtubeProfile.playlists.length} playlists:`, 
+                        youtubeProfile.playlists.slice(0, 3).map(p => p.snippet.title));
+                }
+            } catch (error) {
+                console.error('Error fetching playlists:', error);
+            }
+        }
+
+        // Fetch liked videos
+        async function fetchLikedVideos(likesPlaylistId) {
+            try {
+                if (!likesPlaylistId) return;
+                
+                console.log('❤️ Fetching your liked videos...');
+                const likedResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${likesPlaylistId}&maxResults=50&access_token=${youtubeAccessToken}`
+                );
+
+                if (likedResponse.ok) {
+                    const likedData = await likedResponse.json();
+                    youtubeProfile.likedVideos = likedData.items;
+                    console.log(`✅ Found ${youtubeProfile.likedVideos.length} liked videos`);
+                }
+            } catch (error) {
+                console.error('Error fetching liked videos:', error);
+            }
+        }
+
+        // Fetch subscriptions (music channels)
+        async function fetchSubscriptions() {
+            try {
+                console.log('🎤 Fetching your subscriptions...');
+                const subsResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50&access_token=${youtubeAccessToken}`
+                );
+
+                if (subsResponse.ok) {
+                    const subsData = await subsResponse.json();
+                    youtubeProfile.subscribedChannels = subsData.items;
+                    console.log(`✅ Found ${youtubeProfile.subscribedChannels.length} subscriptions`);
+                }
+            } catch (error) {
+                console.error('Error fetching subscriptions:', error);
+            }
+        }
+
+        // Analyze YouTube preferences
+        function analyzeYouTubePreferences() {
+            // Extract music genres from playlist names and video titles
+            const musicKeywords = {
+                'pop': ['pop', 'chart', 'hits', 'billboard'],
+                'rock': ['rock', 'metal', 'alternative', 'indie'],
+                'hiphop': ['hip hop', 'rap', 'hip-hop', 'trap'],
+                'electronic': ['electronic', 'edm', 'techno', 'house', 'dubstep'],
+                'country': ['country', 'folk', 'americana'],
+                'classical': ['classical', 'orchestra', 'symphony'],
+                'jazz': ['jazz', 'blues', 'soul'],
+                'reggae': ['reggae', 'ska'],
+                'latin': ['latin', 'salsa', 'bachata', 'reggaeton']
+            };
+
+            const genreCount = {};
+            const artistCount = {};
+
+            // Analyze playlists
+            youtubeProfile.playlists.forEach(playlist => {
+                const title = playlist.snippet.title.toLowerCase();
+                Object.keys(musicKeywords).forEach(genre => {
+                    if (musicKeywords[genre].some(keyword => title.includes(keyword))) {
+                        genreCount[genre] = (genreCount[genre] || 0) + 1;
+                    }
+                });
+            });
+
+            // Analyze liked videos
+            youtubeProfile.likedVideos.forEach(video => {
+                const title = video.snippet.title.toLowerCase();
+                const channelTitle = video.snippet.channelTitle;
+                
+                // Count genres
+                Object.keys(musicKeywords).forEach(genre => {
+                    if (musicKeywords[genre].some(keyword => title.includes(keyword))) {
+                        genreCount[genre] = (genreCount[genre] || 0) + 2; // Liked videos have more weight
+                    }
+                });
+
+                // Count artists/channels
+                artistCount[channelTitle] = (artistCount[channelTitle] || 0) + 1;
+            });
+
+            // Set preferences
+            youtubeProfile.preferences.musicGenres = Object.entries(genreCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([genre]) => genre);
+
+            youtubeProfile.preferences.favoriteArtists = Object.entries(artistCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([artist]) => artist);
+
+            console.log('YouTube preferences calculated:', youtubeProfile.preferences);
+        }
+
+        // Generate YouTube personalized recommendations
+        function generateYouTubePersonalizedRecommendations() {
+            youtubePersonalizedRecommendations = {};
+
+            Object.keys(MUSIC_RECOMMENDATIONS).forEach(emotion => {
+                const baseTracks = MUSIC_RECOMMENDATIONS[emotion];
+                const personalizedTracks = [];
+
+                baseTracks.forEach(track => {
+                    // Calculate similarity based on YouTube preferences
+                    const similarity = calculateYouTubeSimilarity(track);
+                    
+                    // Adjust match percentage
+                    const adjustedMatch = Math.round(
+                        (parseFloat(track.match.replace('%', '')) * 0.7 + similarity * 30)
+                    );
+
+                    personalizedTracks.push({
+                        ...track,
+                        match: `${Math.min(adjustedMatch, 99)}%`,
+                        personalizedScore: similarity,
+                        reason: getYouTubeRecommendationReason(track, similarity)
+                    });
+                });
+
+                // Sort by personalized score
+                personalizedTracks.sort((a, b) => b.personalizedScore - a.personalizedScore);
+                youtubePersonalizedRecommendations[emotion] = personalizedTracks.slice(0, 5);
+
+                // Add user's own videos that match this emotion
+                addUserYouTubeVideosForEmotion(emotion, youtubePersonalizedRecommendations[emotion]);
+            });
+
+            console.log('YouTube personalized recommendations generated:', youtubePersonalizedRecommendations);
+        }
+
+        // Calculate YouTube similarity
+        function calculateYouTubeSimilarity(track) {
+            if (!youtubeProfile.preferences.musicGenres.length) return 0.5;
+
+            let similarity = 0.5; // Base similarity
+
+            // Check if artist is in user's favorites
+            if (youtubeProfile.preferences.favoriteArtists.some(artist => 
+                artist.toLowerCase().includes(track.artist.toLowerCase()) || 
+                track.artist.toLowerCase().includes(artist.toLowerCase())
+            )) {
+                similarity += 0.3;
+            }
+
+            // Check genre matching based on track name/artist
+            const trackText = `${track.name} ${track.artist}`.toLowerCase();
+            youtubeProfile.preferences.musicGenres.forEach((genre, index) => {
+                const weight = (5 - index) / 15; // Higher weight for top genres
+                if (trackText.includes(genre) || 
+                    (genre === 'hiphop' && (trackText.includes('hip hop') || trackText.includes('rap'))) ||
+                    (genre === 'electronic' && (trackText.includes('edm') || trackText.includes('electronic')))) {
+                    similarity += weight;
+                }
+            });
+
+            return Math.min(similarity, 1.0);
+        }
+
+        // Add user's YouTube videos for emotion
+        function addUserYouTubeVideosForEmotion(emotion, recommendations) {
+            if (!youtubeProfile.likedVideos.length) return;
+
+            // Simple emotion matching based on video titles
+            const emotionKeywords = {
+                'happy': ['happy', 'joy', 'celebration', 'party', 'dance', 'upbeat'],
+                'sad': ['sad', 'melancholy', 'heartbreak', 'emotional', 'slow'],
+                'angry': ['angry', 'rage', 'aggressive', 'metal', 'hard'],
+                'surprised': ['surprising', 'unexpected', 'wow', 'amazing'],
+                'fearful': ['dark', 'scary', 'anxiety', 'worried'],
+                'disgusted': ['disgusted', 'hate', 'awful'],
+                'neutral': ['chill', 'relax', 'calm', 'peaceful']
+            };
+
+            const keywords = emotionKeywords[emotion] || [];
+            
+            youtubeProfile.likedVideos.forEach(video => {
+                const title = video.snippet.title.toLowerCase();
+                const matchesEmotion = keywords.some(keyword => title.includes(keyword));
+
+                if (matchesEmotion && recommendations.length < 7) {
+                    recommendations.push({
+                        name: video.snippet.title,
+                        artist: video.snippet.channelTitle,
+                        uri: null,
+                        youtubeId: video.snippet.resourceId?.videoId || video.snippet.videoId,
+                        match: '❤️ Your Video',
+                        personalizedScore: 1.0,
+                        reason: 'From your liked videos',
+                        isUserVideo: true
+                    });
+                }
+            });
+        }
+
+        // Get YouTube recommendation reason
+        function getYouTubeRecommendationReason(track, similarity) {
+            if (similarity > 0.8) return 'Perfect match for your YouTube taste';
+            if (similarity > 0.6) return 'Great match based on your subscriptions';
+            if (similarity > 0.4) return 'Good fit for your video preferences';
+            return 'Recommended for this mood';
+        }
+
+        // Show YouTube personalization debug
+        function showYouTubePersonalizationDebug() {
+            const debugPanel = document.createElement('div');
+            debugPanel.id = 'youtubePersonalizationDebug';
+            debugPanel.style.cssText = `
+                background: white;
+                border: 2px solid #ff0000;
+                border-radius: 10px;
+                padding: 15px;
+                margin: 15px 0;
+                font-size: 0.9em;
+                display: none;
+            `;
+
+            debugPanel.innerHTML = `
+                <h4 style="color: #ff0000; margin-bottom: 10px;">🔍 Your YouTube Music Analysis</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>🎵 Your Top Music Genres:</strong><br>
+                        ${youtubeProfile.preferences.musicGenres.slice(0, 5).map((genre, i) => `${i + 1}. ${genre}`).join('<br>')}<br>
+                        <small style="color: #666;">From ${youtubeProfile.playlists.length} playlists & ${youtubeProfile.likedVideos.length} liked videos</small>
+                    </div>
+                    <div>
+                        <strong>🎤 Your Favorite Artists:</strong><br>
+                        ${youtubeProfile.preferences.favoriteArtists.slice(0, 5).map((artist, i) => `${i + 1}. ${artist}`).join('<br>')}<br>
+                        <small style="color: #666;">Based on your YouTube activity</small>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>📺 Data Analyzed:</strong><br>
+                    • ${youtubeProfile.playlists.length} playlists<br>
+                    • ${youtubeProfile.likedVideos.length} liked videos<br>
+                    • ${youtubeProfile.subscribedChannels.length} channel subscriptions<br>
+                </div>
+                <button onclick="this.parentElement.style.display='none'" style="
+                    background: #ff0000; 
+                    color: white; 
+                    border: none; 
+                    padding: 5px 10px; 
+                    border-radius: 4px; 
+                    margin-top: 10px;
+                    cursor: pointer;
+                ">Close Analysis</button>
+            `;
+
+            const recPanel = document.querySelector('.recommendations-panel');
+            recPanel.appendChild(debugPanel);
+
+            // Add debug button to YouTube controls if not exists
+            if (!document.getElementById('youtubeDebugBtn')) {
+                const debugBtn = document.createElement('button');
+                debugBtn.id = 'youtubeDebugBtn';
+                debugBtn.className = 'control-btn';
+                debugBtn.style.cssText = 'background: #ff0000; color: white; margin: 5px;';
+                debugBtn.innerHTML = '🔍 Show YouTube Analysis';
+                debugBtn.onclick = () => {
+                    debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+                };
+
+                const youtubeControls = document.getElementById('youtubePlayerControls');
+                if (youtubeControls) {
+                    youtubeControls.appendChild(debugBtn);
+                }
             }
         }
 
