@@ -2,47 +2,120 @@
         let userBaseline = null;
         
         // Show calibration prompt (now globally accessible)
-        function showCalibrationPrompt() {
+        window.showCalibrationPrompt = function() {
+            // Remove any existing modals first
+            const existingModal = document.getElementById('calibrationModal');
+            if (existingModal) existingModal.remove();
+            
             const modal = document.createElement('div');
             modal.style.cssText = `
-                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(10px);
-                display: flex; align-items: center; justify-content: center; z-index: 2000;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: rgba(0, 0, 0, 0.95) !important;
+                backdrop-filter: blur(15px) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                z-index: 9999 !important;
             `;
             
             const content = document.createElement('div');
             content.style.cssText = `
-                background: var(--glass-bg); backdrop-filter: blur(20px);
-                border: 1px solid var(--glass-border); border-radius: 20px;
-                padding: 40px; max-width: 500px; text-align: center; color: white;
+                background: rgba(102, 126, 234, 0.2) !important;
+                backdrop-filter: blur(25px) !important;
+                border: 2px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 25px !important;
+                padding: 50px !important;
+                max-width: 550px !important;
+                width: 90% !important;
+                text-align: center !important;
+                color: white !important;
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+                position: relative !important;
+                z-index: 10000 !important;
             `;
             
-            content.innerHTML = `
-                <h3 style="margin-bottom: 20px;">🎯 AI Emotion Calibration</h3>
-                <p style="margin-bottom: 25px; opacity: 0.9;">
-                    Improve detection accuracy by training the AI on YOUR facial expressions.
-                    You'll make 4 different expressions for 3 seconds each.
-                </p>
-                <button class="btn" onclick="startCalibrationProcess()">🎭 Start Calibration</button>
-                <button class="btn btn-secondary" onclick="skipCalibrationProcess()" style="margin-left: 10px;">Skip</button>
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '×';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 2rem;
+                cursor: pointer;
+                opacity: 0.7;
+                transition: opacity 0.3s;
             `;
+            closeBtn.onclick = () => modal.remove();
             
-            modal.id = 'calibrationModal';
-            modal.appendChild(content);
-            document.body.appendChild(modal);
+            const title = document.createElement('h3');
+            title.textContent = '🎯 AI Emotion Calibration';
+            title.style.cssText = 'margin-bottom: 25px; font-size: 1.8rem;';
             
-            // Make functions globally accessible
-            window.startCalibrationProcess = () => {
+            const description = document.createElement('p');
+            description.textContent = 'Improve detection accuracy by training the AI on YOUR facial expressions. You\'ll make 4 different expressions for 3 seconds each.';
+            description.style.cssText = 'margin-bottom: 35px; opacity: 0.9; font-size: 1.1rem; line-height: 1.5;';
+            
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display: flex; gap: 20px; justify-content: center;';
+            
+            const startBtn = document.createElement('button');
+            startBtn.innerHTML = '🎭 Start Calibration';
+            startBtn.className = 'btn';
+            startBtn.onclick = () => {
                 modal.remove();
-                runCalibrationSequence();
+                window.runCalibrationSequence();
             };
             
-            window.skipCalibrationProcess = () => {
+            const skipBtn = document.createElement('button');
+            skipBtn.innerHTML = 'Skip';
+            skipBtn.className = 'btn btn-secondary';
+            skipBtn.onclick = () => {
                 modal.remove();
                 userBaseline = createDefaultBaseline();
                 showNotification('🤖 Using Smart Detection', 'AI will use advanced pattern recognition');
             };
-        }<!DOCTYPE html>
+            
+            // Assemble modal
+            buttonContainer.appendChild(startBtn);
+            buttonContainer.appendChild(skipBtn);
+            
+            content.appendChild(closeBtn);
+            content.appendChild(title);
+            content.appendChild(description);
+            content.appendChild(buttonContainer);
+            
+            modal.id = 'calibrationModal';
+            modal.appendChild(content);
+            
+            // Add to body and ensure it's on top
+            document.body.appendChild(modal);
+            
+            // Force focus on modal
+            modal.focus();
+        };
+        
+        // Make calibration functions global
+        window.startCalibrationProcess = function() {
+            const modal = document.getElementById('calibrationModal');
+            if (modal) modal.remove();
+            runCalibrationSequence();
+        };
+        
+        window.skipCalibrationProcess = function() {
+            const modal = document.getElementById('calibrationModal');
+            if (modal) modal.remove();
+            userBaseline = createDefaultBaseline();
+            showNotification('🤖 Using Smart Detection', 'AI will use advanced pattern recognition');
+        };<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1290,85 +1363,85 @@
                 setTimeout(analyzeVideoFrame, 300);
             };
             
-            // Show calibration prompt
-            function runCalibrationSequence() {
-                const emotions = [
-                    { name: 'neutral', emoji: '😐', instruction: 'Keep a neutral, relaxed expression' },
-                    { name: 'happy', emoji: '😊', instruction: 'Show a natural smile' },
-                    { name: 'sad', emoji: '😢', instruction: 'Make a sad, frowning expression' },
-                    { name: 'surprised', emoji: '😮', instruction: 'Show surprise with raised eyebrows' }
-                ];
-                
-                let currentStep = 0;
-                userBaseline = {};
-                
-                function calibrateEmotion(emotionData) {
-                    return new Promise((resolve) => {
-                        showCalibrationStep(emotionData, (baseline) => {
-                            userBaseline[emotionData.name] = baseline;
-                            resolve();
-                        });
+        // Make key functions globally accessible
+        window.runCalibrationSequence = function() {
+            const emotions = [
+                { name: 'neutral', emoji: '😐', instruction: 'Keep a neutral, relaxed expression' },
+                { name: 'happy', emoji: '😊', instruction: 'Show a natural smile' },
+                { name: 'sad', emoji: '😢', instruction: 'Make a sad, frowning expression' },
+                { name: 'surprised', emoji: '😮', instruction: 'Show surprise with raised eyebrows' }
+            ];
+            
+            let currentStep = 0;
+            userBaseline = {};
+            
+            function calibrateEmotion(emotionData) {
+                return new Promise((resolve) => {
+                    showCalibrationStep(emotionData, (baseline) => {
+                        userBaseline[emotionData.name] = baseline;
+                        resolve();
                     });
-                }
-                
-                async function runSequence() {
-                    for (const emotion of emotions) {
-                        await calibrateEmotion(emotion);
-                    }
-                    
-                    showNotification('🎉 Calibration Complete!', 'AI is now tuned to your expressions');
-                    analyzeVideoFrame();
-                }
-                
-                runSequence();
+                });
             }
             
-            // Show individual calibration step
-            function showCalibrationStep(emotionData, callback) {
-                const modal = document.createElement('div');
-                modal.style.cssText = `
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px);
-                    display: flex; align-items: center; justify-content: center; z-index: 2000;
-                `;
+            async function runSequence() {
+                for (const emotion of emotions) {
+                    await calibrateEmotion(emotion);
+                }
                 
-                const content = document.createElement('div');
-                content.style.cssText = `
-                    background: var(--glass-bg); backdrop-filter: blur(20px);
-                    border: 1px solid var(--glass-border); border-radius: 20px;
-                    padding: 30px; max-width: 400px; text-align: center; color: white;
-                `;
-                
-                content.innerHTML = `
-                    <div style="font-size: 4rem; margin-bottom: 20px;">${emotionData.emoji}</div>
-                    <h3 style="margin-bottom: 15px;">${emotionData.name.toUpperCase()}</h3>
-                    <p style="margin-bottom: 25px; opacity: 0.9;">${emotionData.instruction}</p>
-                    <div id="countdown" style="font-size: 2rem; font-weight: bold; color: #4facfe;">3</div>
-                `;
-                
-                modal.appendChild(content);
-                document.body.appendChild(modal);
-                
-                let countdown = 3;
-                const countdownEl = content.querySelector('#countdown');
-                
-                const timer = setInterval(() => {
-                    countdown--;
-                    countdownEl.textContent = countdown || 'Capturing...';
-                    
-                    if (countdown === 0) {
-                        // Capture baseline for this emotion
-                        const baseline = captureEmotionBaseline();
-                        
-                        setTimeout(() => {
-                            modal.remove();
-                            callback(baseline);
-                        }, 500);
-                        
-                        clearInterval(timer);
-                    }
-                }, 1000);
+                showNotification('🎉 Calibration Complete!', 'AI is now tuned to your expressions');
+                console.log('Calibration complete:', userBaseline);
             }
+            
+            runSequence();
+        };
+        
+        // Show individual calibration step
+        function showCalibrationStep(emotionData, callback) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px);
+                display: flex; align-items: center; justify-content: center; z-index: 2000;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: var(--glass-bg); backdrop-filter: blur(20px);
+                border: 1px solid var(--glass-border); border-radius: 20px;
+                padding: 30px; max-width: 400px; text-align: center; color: white;
+            `;
+            
+            content.innerHTML = `
+                <div style="font-size: 4rem; margin-bottom: 20px;">${emotionData.emoji}</div>
+                <h3 style="margin-bottom: 15px;">${emotionData.name.toUpperCase()}</h3>
+                <p style="margin-bottom: 25px; opacity: 0.9;">${emotionData.instruction}</p>
+                <div id="countdown" style="font-size: 2rem; font-weight: bold; color: #4facfe;">3</div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            let countdown = 3;
+            const countdownEl = content.querySelector('#countdown');
+            
+            const timer = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown || 'Capturing...';
+                
+                if (countdown === 0) {
+                    // Capture baseline for this emotion
+                    const baseline = captureEmotionBaseline();
+                    
+                    setTimeout(() => {
+                        modal.remove();
+                        callback(baseline);
+                    }, 500);
+                    
+                    clearInterval(timer);
+                }
+            }, 1000);
+        }
             
             // Capture emotion baseline from current video frame
             function captureEmotionBaseline() {
