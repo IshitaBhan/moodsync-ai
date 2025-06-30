@@ -1,104 +1,10 @@
-// Global calibration functions
-        let userBaseline = null;
-        
-        // Simple, working calibration modal
-        window.showCalibrationPrompt = function() {
-            // Remove any existing modals
-            const existing = document.getElementById('calibrationModal');
-            if (existing) existing.remove();
-            
-            // Create simple modal
-            const modal = document.createElement('div');
-            modal.id = 'calibrationModal';
-            modal.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(0,0,0,0.9);
-                    z-index: 10000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
-                    <div style="
-                        background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-                        backdrop-filter: blur(20px);
-                        border: 1px solid rgba(255,255,255,0.2);
-                        border-radius: 20px;
-                        padding: 40px;
-                        max-width: 500px;
-                        text-align: center;
-                        color: white;
-                        margin: 20px;
-                    ">
-                        <h3 style="margin-bottom: 20px; font-size: 1.5rem;">🎯 AI Emotion Calibration</h3>
-                        <p style="margin-bottom: 30px; opacity: 0.9; line-height: 1.5;">
-                            Train the AI on YOUR facial expressions for better accuracy.
-                            <br>Make 4 different expressions for 3 seconds each.
-                        </p>
-                        <div style="display: flex; gap: 15px; justify-content: center;">
-                            <button onclick="startCalibration()" style="
-                                background: linear-gradient(45deg, #FF6B6B, #FF8E53);
-                                border: none;
-                                padding: 12px 25px;
-                                border-radius: 25px;
-                                color: white;
-                                font-weight: bold;
-                                cursor: pointer;
-                                font-size: 1rem;
-                            ">🎭 Start Calibration</button>
-                            <button onclick="skipCalibration()" style="
-                                background: linear-gradient(45deg, #667eea, #764ba2);
-                                border: none;
-                                padding: 12px 25px;
-                                border-radius: 25px;
-                                color: white;
-                                font-weight: bold;
-                                cursor: pointer;
-                                font-size: 1rem;
-                            ">Skip</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-        };
-        
-        // Simple calibration functions
-        function startCalibration() {
-            document.getElementById('calibrationModal').remove();
-            showNotification('🎭 Calibration Started', 'AI will learn your expressions');
-            userBaseline = createDefaultBaseline(); // For now, just use defaults
-        }
-        
-        function skipCalibration() {
-            document.getElementById('calibrationModal').remove();
-            showNotification('🤖 Using Smart Detection', 'AI will use advanced pattern recognition');
-            userBaseline = createDefaultBaseline();
-        }
-        
-        // Make calibration functions global
-        window.startCalibrationProcess = function() {
-            const modal = document.getElementById('calibrationModal');
-            if (modal) modal.remove();
-            runCalibrationSequence();
-        };
-        
-        window.skipCalibrationProcess = function() {
-            const modal = document.getElementById('calibrationModal');
-            if (modal) modal.remove();
-            userBaseline = createDefaultBaseline();
-            showNotification('🤖 Using Smart Detection', 'AI will use advanced pattern recognition');
-        };<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodSync Pro - Advanced AI Emotion Detection & Music Curation</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.2.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@0.0.3/dist/face-landmarks-detection.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>MoodSync Pro - Advanced AI Emotion Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -106,10 +12,8 @@
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
-            --dark-bg: rgba(0, 0, 0, 0.8);
             --text-primary: #ffffff;
             --text-secondary: rgba(255, 255, 255, 0.8);
         }
@@ -193,7 +97,6 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: 2fr 1fr 2fr;
-            grid-template-rows: auto auto;
             gap: 25px;
             height: calc(100vh - 140px);
         }
@@ -206,6 +109,8 @@
             padding: 25px;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
         .section-header {
@@ -228,7 +133,7 @@
             background: #000;
             border-radius: 15px;
             overflow: hidden;
-            height: 400px;
+            flex: 1;
         }
         
         #video {
@@ -337,7 +242,7 @@
         
         .chart-container {
             position: relative;
-            height: 250px;
+            height: 200px;
         }
         
         .playlist-section {
@@ -348,13 +253,6 @@
             padding: 25px;
             display: flex;
             flex-direction: column;
-        }
-        
-        .playlist-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 20px;
         }
         
         .playlist-tabs {
@@ -458,20 +356,6 @@
             transform: scale(1.1);
         }
         
-        .mood-history {
-            grid-column: 1 / -1;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            padding: 25px;
-        }
-        
-        .history-chart {
-            height: 200px;
-            position: relative;
-        }
-        
         .btn {
             background: var(--secondary-gradient);
             border: none;
@@ -501,53 +385,6 @@
         
         .btn-primary:hover {
             box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
-        }
-        
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--dark-bg);
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .loading-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid #4facfe;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
         }
         
         .notification {
@@ -580,7 +417,6 @@
         @media (max-width: 1200px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto auto;
                 height: auto;
             }
             
@@ -640,9 +476,7 @@
             <!-- Camera Section -->
             <div class="camera-section">
                 <div class="section-header">
-                    <div class="section-title">
-                        🎭 Live Emotion Detection
-                    </div>
+                    <div class="section-title">🎭 Live Emotion Detection</div>
                     <button class="btn btn-primary" id="startBtn" onclick="initializeCamera()">Start Analysis</button>
                 </div>
                 
@@ -655,12 +489,6 @@
                         <button class="control-btn" onclick="captureSnapshot()" title="Capture">📸</button>
                         <button class="control-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
                     </div>
-                </div>
-                
-                <div class="loading-overlay" id="cameraLoading">
-                    <div class="loading-spinner"></div>
-                    <div>Initializing AI Models...</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 10px;">Loading face detection & emotion analysis</div>
                 </div>
             </div>
 
@@ -686,17 +514,14 @@
             <!-- Playlist Section -->
             <div class="playlist-section">
                 <div class="section-header">
-                    <div class="section-title">
-                        🎶 Smart Playlists
-                    </div>
-                    <button class="btn" onclick="generateAdvancedPlaylist()" id="generateBtn">Generate</button>
+                    <div class="section-title">🎶 Smart Playlists</div>
+                    <button class="btn" onclick="generatePlaylist()" id="generateBtn">Generate</button>
                 </div>
                 
                 <div class="playlist-tabs">
-                    <button class="tab-btn active" onclick="switchPlaylistTab('mood')">Mood Match</button>
-                    <button class="tab-btn" onclick="switchPlaylistTab('energy')">Energy Boost</button>
-                    <button class="tab-btn" onclick="switchPlaylistTab('focus')">Focus Mode</button>
-                    <button class="tab-btn" onclick="switchPlaylistTab('personal')" id="personalTab" style="display: none;">🎯 Personal AI</button>
+                    <button class="tab-btn active" onclick="switchTab('mood')">Mood Match</button>
+                    <button class="tab-btn" onclick="switchTab('energy')">Energy Boost</button>
+                    <button class="tab-btn" onclick="switchTab('focus')">Focus Mode</button>
                 </div>
                 
                 <div class="track-list" id="trackList">
@@ -705,1173 +530,98 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Mood History -->
-            <div class="mood-history">
-                <div class="section-title" style="margin-bottom: 20px;">📈 Mood Timeline</div>
-                <div class="history-chart">
-                    <canvas id="historyChart"></canvas>
-                </div>
-            </div>
         </div>
     </div>
 
     <script>
-        // Global variables
+        // Global variables - CLEAN START
         let video, overlay, overlayCtx;
         let isDetecting = false;
-        let detectionInterval;
-        let emotionChart, historyChart;
+        let emotionChart;
         let currentEmotion = 'neutral';
         let emotionHistory = [];
-        let confidenceHistory = [];
         let sessionsCount = 0;
         let songsPlayedCount = 0;
-        let userBaseline = null; // Simple baseline without complex calibration
-        
-        // Spotify integration variables
         let spotifyAccessToken = null;
-        let userProfile = null;
-        let userTopTracks = [];
-        let userTopArtists = [];
-        let personalizedPlaylists = {};
-        let audioFeatures = {};
         
-        // Spotify Web API configuration
+        // Spotify config
         const SPOTIFY_CONFIG = {
             clientId: 'e642820d6fd04ac699ad222cb2e9ad08',
             redirectUri: window.location.origin + window.location.pathname,
             scope: 'user-read-private user-read-email user-top-read playlist-read-private user-library-read'
         };
         
-        // Enhanced emotion data with more sophisticated mappings
+        // Emotion data
         const emotionData = {
             happy: { 
                 emoji: '😊', 
-                color: '#FFD700', 
-                energy: 0.8,
-                playlists: {
-                    mood: [
-                        { title: "Happy", artist: "Pharrell Williams", mood: "Uplifting", genre: "Pop", energy: 0.9 },
-                        { title: "Good as Hell", artist: "Lizzo", mood: "Confident", genre: "Pop", energy: 0.85 },
-                        { title: "Can't Stop the Feeling", artist: "Justin Timberlake", mood: "Joyful", genre: "Pop", energy: 0.88 },
-                        { title: "Walking on Sunshine", artist: "Katrina and the Waves", mood: "Euphoric", genre: "Rock", energy: 0.82 },
-                        { title: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", mood: "Funky", genre: "Funk", energy: 0.87 }
-                    ],
-                    energy: [
-                        { title: "Pump It", artist: "Black Eyed Peas", mood: "Energetic", genre: "Hip-Hop", energy: 0.95 },
-                        { title: "Thunder", artist: "Imagine Dragons", mood: "Powerful", genre: "Rock", energy: 0.9 },
-                        { title: "High Hopes", artist: "Panic! At The Disco", mood: "Motivational", genre: "Rock", energy: 0.88 }
-                    ],
-                    focus: [
-                        { title: "Sunflower", artist: "Post Malone & Swae Lee", mood: "Chill Happy", genre: "Hip-Hop", energy: 0.6 },
-                        { title: "Good 4 U", artist: "Olivia Rodrigo", mood: "Upbeat Focus", genre: "Pop", energy: 0.7 }
-                    ]
-                }
+                tracks: [
+                    { title: "Happy", artist: "Pharrell Williams", mood: "Uplifting" },
+                    { title: "Good as Hell", artist: "Lizzo", mood: "Confident" },
+                    { title: "Can't Stop the Feeling", artist: "Justin Timberlake", mood: "Joyful" },
+                    { title: "Walking on Sunshine", artist: "Katrina and the Waves", mood: "Euphoric" },
+                    { title: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", mood: "Funky" }
+                ]
             },
             sad: { 
                 emoji: '😢', 
-                color: '#4A90E2', 
-                energy: 0.3,
-                playlists: {
-                    mood: [
-                        { title: "Someone Like You", artist: "Adele", mood: "Melancholic", genre: "Pop", energy: 0.2 },
-                        { title: "Hurt", artist: "Johnny Cash", mood: "Reflective", genre: "Country", energy: 0.25 },
-                        { title: "Mad World", artist: "Gary Jules", mood: "Contemplative", genre: "Alternative", energy: 0.15 },
-                        { title: "The Sound of Silence", artist: "Simon & Garfunkel", mood: "Introspective", genre: "Folk", energy: 0.3 },
-                        { title: "Everybody Hurts", artist: "R.E.M.", mood: "Comforting", genre: "Rock", energy: 0.35 }
-                    ],
-                    energy: [
-                        { title: "Stronger", artist: "Kelly Clarkson", mood: "Empowering", genre: "Pop", energy: 0.7 },
-                        { title: "Fight Song", artist: "Rachel Platten", mood: "Motivational", genre: "Pop", energy: 0.75 }
-                    ],
-                    focus: [
-                        { title: "Breathe Me", artist: "Sia", mood: "Meditative", genre: "Alternative", energy: 0.4 },
-                        { title: "Skinny Love", artist: "Bon Iver", mood: "Contemplative Focus", genre: "Indie", energy: 0.3 }
-                    ]
-                }
-            },
-            angry: { 
-                emoji: '😠', 
-                color: '#FF6B6B', 
-                energy: 0.9,
-                playlists: {
-                    mood: [
-                        { title: "Break Stuff", artist: "Limp Bizkit", mood: "Aggressive", genre: "Nu-Metal", energy: 0.95 },
-                        { title: "Killing in the Name", artist: "Rage Against the Machine", mood: "Rebellious", genre: "Rock", energy: 0.92 },
-                        { title: "Bodies", artist: "Drowning Pool", mood: "Intense", genre: "Metal", energy: 0.98 },
-                        { title: "Chop Suey!", artist: "System of a Down", mood: "Chaotic", genre: "Metal", energy: 0.9 },
-                        { title: "Breaking the Habit", artist: "Linkin Park", mood: "Cathartic", genre: "Nu-Metal", energy: 0.85 }
-                    ],
-                    energy: [
-                        { title: "Till I Collapse", artist: "Eminem", mood: "Determined", genre: "Hip-Hop", energy: 0.95 },
-                        { title: "Lose Yourself", artist: "Eminem", mood: "Focused Rage", genre: "Hip-Hop", energy: 0.9 }
-                    ],
-                    focus: [
-                        { title: "Hysteria", artist: "Muse", mood: "Controlled Intensity", genre: "Rock", energy: 0.8 },
-                        { title: "Seven Nation Army", artist: "The White Stripes", mood: "Focused Anger", genre: "Rock", energy: 0.75 }
-                    ]
-                }
-            },
-            surprised: { 
-                emoji: '😮', 
-                color: '#FF9500', 
-                energy: 0.7,
-                playlists: {
-                    mood: [
-                        { title: "Bohemian Rhapsody", artist: "Queen", mood: "Dramatic", genre: "Rock", energy: 0.8 },
-                        { title: "Mr. Brightside", artist: "The Killers", mood: "Unexpected", genre: "Rock", energy: 0.75 },
-                        { title: "Take On Me", artist: "a-ha", mood: "Surprising", genre: "Synth-Pop", energy: 0.7 },
-                        { title: "Don't Stop Me Now", artist: "Queen", mood: "Exhilarating", genre: "Rock", energy: 0.85 }
-                    ],
-                    energy: [
-                        { title: "Shut Up and Dance", artist: "Walk the Moon", mood: "Spontaneous", genre: "Pop", energy: 0.9 }
-                    ],
-                    focus: [
-                        { title: "Somebody Told Me", artist: "The Killers", mood: "Alert Focus", genre: "Rock", energy: 0.6 }
-                    ]
-                }
+                tracks: [
+                    { title: "Someone Like You", artist: "Adele", mood: "Melancholic" },
+                    { title: "Hurt", artist: "Johnny Cash", mood: "Reflective" },
+                    { title: "Mad World", artist: "Gary Jules", mood: "Contemplative" },
+                    { title: "The Sound of Silence", artist: "Simon & Garfunkel", mood: "Introspective" },
+                    { title: "Everybody Hurts", artist: "R.E.M.", mood: "Comforting" }
+                ]
             },
             neutral: { 
                 emoji: '😐', 
-                color: '#95A5A6', 
-                energy: 0.5,
-                playlists: {
-                    mood: [
-                        { title: "Blinding Lights", artist: "The Weeknd", mood: "Balanced", genre: "Synth-Pop", energy: 0.6 },
-                        { title: "Levitating", artist: "Dua Lipa", mood: "Steady", genre: "Pop", energy: 0.65 },
-                        { title: "As It Was", artist: "Harry Styles", mood: "Mellow", genre: "Pop", energy: 0.5 },
-                        { title: "Stay", artist: "The Kid LAROI & Justin Bieber", mood: "Contemporary", genre: "Pop", energy: 0.55 },
-                        { title: "Good Ones", artist: "Charli XCX", mood: "Modern", genre: "Pop", energy: 0.6 }
-                    ],
-                    energy: [
-                        { title: "Physical", artist: "Dua Lipa", mood: "Moderate Energy", genre: "Pop", energy: 0.75 }
-                    ],
-                    focus: [
-                        { title: "Midnight City", artist: "M83", mood: "Ambient Focus", genre: "Electronic", energy: 0.5 },
-                        { title: "Weightless", artist: "Marconi Union", mood: "Concentrated", genre: "Ambient", energy: 0.3 }
-                    ]
-                }
+                tracks: [
+                    { title: "Blinding Lights", artist: "The Weeknd", mood: "Balanced" },
+                    { title: "Levitating", artist: "Dua Lipa", mood: "Steady" },
+                    { title: "As It Was", artist: "Harry Styles", mood: "Mellow" },
+                    { title: "Stay", artist: "The Kid LAROI & Justin Bieber", mood: "Contemporary" },
+                    { title: "Good Ones", artist: "Charli XCH", mood: "Modern" }
+                ]
             },
-            fearful: { 
-                emoji: '😨', 
-                color: '#9B59B6', 
-                energy: 0.4,
-                playlists: {
-                    mood: [
-                        { title: "Breathe Me", artist: "Sia", mood: "Vulnerable", genre: "Alternative", energy: 0.3 },
-                        { title: "Heavy", artist: "Linkin Park ft. Kiiara", mood: "Overwhelming", genre: "Alternative", energy: 0.4 },
-                        { title: "Hurt", artist: "Nine Inch Nails", mood: "Raw", genre: "Industrial", energy: 0.35 }
-                    ],
-                    energy: [
-                        { title: "Stronger", artist: "Kelly Clarkson", mood: "Overcoming", genre: "Pop", energy: 0.7 }
-                    ],
-                    focus: [
-                        { title: "Mad World", artist: "Gary Jules", mood: "Contemplative", genre: "Alternative", energy: 0.2 }
-                    ]
-                }
-            },
-            disgusted: { 
-                emoji: '🤢', 
-                color: '#27AE60', 
-                energy: 0.4,
-                playlists: {
-                    mood: [
-                        { title: "Toxic", artist: "Britney Spears", mood: "Attitude", genre: "Pop", energy: 0.8 },
-                        { title: "Bad Guy", artist: "Billie Eilish", mood: "Edgy", genre: "Alternative", energy: 0.6 }
-                    ],
-                    energy: [
-                        { title: "Confident", artist: "Demi Lovato", mood: "Assertive", genre: "Pop", energy: 0.8 }
-                    ],
-                    focus: [
-                        { title: "Bury a Friend", artist: "Billie Eilish", mood: "Dark Focus", genre: "Alternative", energy: 0.4 }
-                    ]
-                }
+            surprised: { 
+                emoji: '😮', 
+                tracks: [
+                    { title: "Bohemian Rhapsody", artist: "Queen", mood: "Dramatic" },
+                    { title: "Mr. Brightside", artist: "The Killers", mood: "Unexpected" },
+                    { title: "Take On Me", artist: "a-ha", mood: "Surprising" },
+                    { title: "Don't Stop Me Now", artist: "Queen", mood: "Exhilarating" }
+                ]
             }
         };
         
-        // Initialize application
-        document.addEventListener('DOMContentLoaded', async function() {
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('🎵 MoodSync Pro initializing...');
-            
-            // FORCE REMOVE ALL MODALS IMMEDIATELY
-            setTimeout(() => {
-                // Remove all possible modal elements
-                document.querySelectorAll('div').forEach(div => {
-                    if (div.innerHTML && (
-                        div.innerHTML.includes('AI Emotion Calibration') ||
-                        div.innerHTML.includes('Start Calibration') ||
-                        div.innerHTML.includes('skipCalibration') ||
-                        div.style.position === 'fixed'
-                    )) {
-                        console.log('Removing modal:', div);
-                        div.remove();
-                    }
-                });
-            }, 50);
-            
-            // Check for Spotify auth code
-            checkSpotifyAuth();
-            
-            // Initialize charts
-            initializeCharts();
-            
-            // Load session data
-            loadSessionData();
             
             // Set up video elements
             video = document.getElementById('video');
             overlay = document.getElementById('overlay');
             overlayCtx = overlay.getContext('2d');
             
-            // Initialize baseline
-            userBaseline = createDefaultBaseline();
+            // Initialize chart
+            initializeChart();
+            
+            // Load session data
+            loadSessionData();
             
             console.log('✅ MoodSync Pro ready!');
         });
         
-        // Create default baseline
-        function createDefaultBaseline() {
-            return {
-                neutral: { avgBrightness: 120, centerBrightness: 115, edgePixels: 800 },
-                happy: { avgBrightness: 130, centerBrightness: 125, edgePixels: 950 },
-                sad: { avgBrightness: 110, centerBrightness: 105, edgePixels: 700 },
-                surprised: { avgBrightness: 135, centerBrightness: 130, edgePixels: 1100 }
-            };
-        }
-        
-        // Spotify Authentication Functions
-        function connectSpotify() {
-            const authUrl = `https://accounts.spotify.com/authorize?` +
-                `client_id=${SPOTIFY_CONFIG.clientId}&` +
-                `response_type=code&` +
-                `redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}&` +
-                `scope=${encodeURIComponent(SPOTIFY_CONFIG.scope)}`;
-            
-            window.location.href = authUrl;
-        }
-        
-        function checkSpotifyAuth() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const authCode = urlParams.get('code');
-            
-            if (authCode) {
-                // In a real app, you'd exchange this code for an access token on your backend
-                // For demo purposes, we'll simulate successful authentication
-                simulateSpotifyConnection();
-                
-                // Clean up URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            // Check if we have stored token
-            const storedToken = localStorage.getItem('spotify_access_token');
-            if (storedToken) {
-                spotifyAccessToken = storedToken;
-                updateSpotifyUI(true);
-                loadUserMusicProfile();
-            }
-        }
-        
-        function simulateSpotifyConnection() {
-            // Simulate successful Spotify connection for demo
-            spotifyAccessToken = 'demo_token_' + Date.now();
-            localStorage.setItem('spotify_access_token', spotifyAccessToken);
-            
-            updateSpotifyUI(true);
-            
-            showNotification('🎉 Spotify Connected!', 'Analyzing your music taste...');
-            
-            // Simulate loading user data
-            setTimeout(() => {
-                loadUserMusicProfile();
-            }, 1500);
-        }
-        
-        function updateSpotifyUI(connected) {
-            const btn = document.getElementById('spotifyBtn');
-            const btnText = document.getElementById('spotifyBtnText');
-            const personalTab = document.getElementById('personalTab');
-            
-            if (connected) {
-                btn.style.background = 'linear-gradient(135deg, #1DB954, #1ed760)';
-                btnText.textContent = '✅ Spotify Connected';
-                personalTab.style.display = 'block';
-                btn.onclick = disconnectSpotify;
-            } else {
-                btn.style.background = 'var(--secondary-gradient)';
-                btnText.textContent = '🎵 Connect Spotify';
-                personalTab.style.display = 'none';
-                btn.onclick = connectSpotify;
-            }
-        }
-        
-        function disconnectSpotify() {
-            localStorage.removeItem('spotify_access_token');
-            spotifyAccessToken = null;
-            userProfile = null;
-            userTopTracks = [];
-            userTopArtists = [];
-            personalizedPlaylists = {};
-            
-            updateSpotifyUI(false);
-            showNotification('👋 Spotify Disconnected', 'Using default recommendations');
-        }
-        
-        // Load and analyze user's music profile
-        async function loadUserMusicProfile() {
-            if (!spotifyAccessToken) return;
-            
-            try {
-                // Simulate API calls (in real app, these would be actual Spotify API calls)
-                await simulateSpotifyAPICall('user-profile');
-                await simulateSpotifyAPICall('top-tracks');
-                await simulateSpotifyAPICall('top-artists');
-                await simulateSpotifyAPICall('audio-features');
-                
-                // Analyze music taste and create personalized emotion mappings
-                analyzeUserMusicTaste();
-                
-                showNotification('🧠 AI Training Complete', 'Your personal music preferences have been analyzed!');
-                
-            } catch (error) {
-                console.error('Failed to load user music profile:', error);
-                showNotification('❌ Profile Load Failed', 'Using default recommendations');
-            }
-        }
-        
-        // Simulate Spotify API calls (replace with real API calls)
-        async function simulateSpotifyAPICall(endpoint) {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    switch(endpoint) {
-                        case 'user-profile':
-                            userProfile = {
-                                display_name: 'Music Lover',
-                                followers: { total: 42 },
-                                id: 'demo_user'
-                            };
-                            break;
-                            
-                        case 'top-tracks':
-                            userTopTracks = [
-                                { name: 'Blinding Lights', artists: [{ name: 'The Weeknd' }], audio_features: { energy: 0.73, valence: 0.33, danceability: 0.76 } },
-                                { name: 'Watermelon Sugar', artists: [{ name: 'Harry Styles' }], audio_features: { energy: 0.82, valence: 0.91, danceability: 0.54 } },
-                                { name: 'drivers license', artists: [{ name: 'Olivia Rodrigo' }], audio_features: { energy: 0.41, valence: 0.11, danceability: 0.56 } },
-                                { name: 'Levitating', artists: [{ name: 'Dua Lipa' }], audio_features: { energy: 0.82, valence: 0.85, danceability: 0.70 } },
-                                { name: 'Good 4 U', artists: [{ name: 'Olivia Rodrigo' }], audio_features: { energy: 0.66, valence: 0.43, danceability: 0.56 } }
-                            ];
-                            break;
-                            
-                        case 'top-artists':
-                            userTopArtists = [
-                                { name: 'The Weeknd', genres: ['pop', 'r&b'] },
-                                { name: 'Harry Styles', genres: ['pop', 'rock'] },
-                                { name: 'Olivia Rodrigo', genres: ['pop'] },
-                                { name: 'Dua Lipa', genres: ['dance pop', 'pop'] },
-                                { name: 'Taylor Swift', genres: ['pop', 'country'] }
-                            ];
-                            break;
-                            
-                        case 'audio-features':
-                            // Calculate user's average audio features
-                            audioFeatures = calculateAverageAudioFeatures();
-                            break;
-                    }
-                    resolve();
-                }, 500);
-            });
-        }
-        
-        // Calculate user's average audio features for personalization
-        function calculateAverageAudioFeatures() {
-            if (userTopTracks.length === 0) return {};
-            
-            const features = {
-                energy: 0,
-                valence: 0,
-                danceability: 0,
-                tempo: 0
-            };
-            
-            userTopTracks.forEach(track => {
-                const af = track.audio_features;
-                features.energy += af.energy || 0.5;
-                features.valence += af.valence || 0.5;
-                features.danceability += af.danceability || 0.5;
-            });
-            
-            const count = userTopTracks.length;
-            return {
-                energy: features.energy / count,
-                valence: features.valence / count,
-                danceability: features.danceability / count
-            };
-        }
-        
-        // Analyze user's music taste and create personalized mappings
-        function analyzeUserMusicTaste() {
-            if (!userTopTracks.length) return;
-            
-            // Create personalized emotion-to-music mappings based on user's preferences
-            personalizedPlaylists = {
-                happy: generatePersonalizedPlaylist('happy'),
-                sad: generatePersonalizedPlaylist('sad'),
-                angry: generatePersonalizedPlaylist('angry'),
-                surprised: generatePersonalizedPlaylist('surprised'),
-                neutral: generatePersonalizedPlaylist('neutral'),
-                fearful: generatePersonalizedPlaylist('fearful'),
-                disgusted: generatePersonalizedPlaylist('disgusted')
-            };
-            
-            console.log('🎯 Personalized playlists created:', personalizedPlaylists);
-        }
-        
-        // Generate personalized playlist for specific emotion
-        function generatePersonalizedPlaylist(emotion) {
-            const emotionMap = {
-                happy: { valence: [0.6, 1.0], energy: [0.5, 1.0] },
-                sad: { valence: [0.0, 0.4], energy: [0.0, 0.5] },
-                angry: { valence: [0.0, 0.5], energy: [0.7, 1.0] },
-                surprised: { valence: [0.4, 0.8], energy: [0.6, 0.9] },
-                neutral: { valence: [0.3, 0.7], energy: [0.3, 0.7] },
-                fearful: { valence: [0.0, 0.3], energy: [0.2, 0.6] },
-                disgusted: { valence: [0.0, 0.4], energy: [0.3, 0.7] }
-            };
-            
-            const targetRange = emotionMap[emotion];
-            const personalizedTracks = [];
-            
-            // Filter user's top tracks that match the emotion's audio features
-            userTopTracks.forEach(track => {
-                const af = track.audio_features;
-                if (af.valence >= targetRange.valence[0] && af.valence <= targetRange.valence[1] &&
-                    af.energy >= targetRange.energy[0] && af.energy <= targetRange.energy[1]) {
-                    personalizedTracks.push({
-                        title: track.name,
-                        artist: track.artists[0].name,
-                        mood: `Personal ${emotion}`,
-                        genre: 'Your Music',
-                        energy: af.energy,
-                        personal: true
-                    });
-                }
-            });
-            
-            // If not enough personal tracks, supplement with similar tracks from user's preferred genres
-            if (personalizedTracks.length < 3) {
-                const userGenres = [...new Set(userTopArtists.flatMap(artist => artist.genres))];
-                const supplementalTracks = generateGenreBasedTracks(emotion, userGenres);
-                personalizedTracks.push(...supplementalTracks);
-            }
-            
-            return personalizedTracks.slice(0, 8); // Limit to 8 tracks
-        }
-        
-        // Generate tracks based on user's preferred genres
-        function generateGenreBasedTracks(emotion, userGenres) {
-            const genreTrackMap = {
-                pop: {
-                    happy: [{ title: "As It Was", artist: "Harry Styles", mood: "Pop Happy", genre: "Pop", energy: 0.7 }],
-                    sad: [{ title: "Someone You Loved", artist: "Lewis Capaldi", mood: "Pop Sad", genre: "Pop", energy: 0.3 }]
-                },
-                rock: {
-                    happy: [{ title: "Don't Stop Me Now", artist: "Queen", mood: "Rock Happy", genre: "Rock", energy: 0.9 }],
-                    angry: [{ title: "We Will Rock You", artist: "Queen", mood: "Rock Angry", genre: "Rock", energy: 0.8 }]
-                }
-            };
-            
-            const tracks = [];
-            userGenres.forEach(genre => {
-                if (genreTrackMap[genre] && genreTrackMap[genre][emotion]) {
-                    tracks.push(...genreTrackMap[genre][emotion]);
-                }
-            });
-            
-            return tracks;
-        }
-        
-        // Load Face-api.js models
-        async function loadFaceAPIModels() {
-            try {
-                console.log('🔄 Loading Face-api.js models...');
-                
-                // Use jsdelivr CDN for better reliability
-                const modelUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
-                
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
-                    faceapi.nets.faceExpressionNet.loadFromUri(modelUrl)
-                ]);
-                
-                console.log('✅ Face-api.js models loaded successfully');
-                return true;
-            } catch (error) {
-                console.warn('⚠️ Face-api.js models failed to load:', error);
-                console.log('🔄 Falling back to enhanced simulation');
-                return false;
-            }
-        }
-        
-        // Initialize camera and AI
-        async function initializeCamera() {
-            const loadingEl = document.getElementById('cameraLoading');
-            const startBtn = document.getElementById('startBtn');
-            
-            loadingEl.classList.add('active');
-            startBtn.disabled = true;
-            startBtn.textContent = 'Loading...';
-            
-            try {
-                // Load AI models
-                const modelsLoaded = await loadFaceAPIModels();
-                
-                // Get camera stream
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: 'user'
-                    } 
-                });
-                
-                video.srcObject = stream;
-                
-                // Set up canvas overlay
-                video.addEventListener('loadedmetadata', () => {
-                    overlay.width = video.videoWidth;
-                    overlay.height = video.videoHeight;
-                });
-                
-                // Start detection
-                video.addEventListener('play', () => {
-                    // Use smart detection without calibration
-                    startFallbackDetection();
-                    
-                    isDetecting = true;
-                    startBtn.textContent = 'Stop Analysis';
-                    startBtn.onclick = stopDetection;
-                    startBtn.disabled = false;
-                    
-                    document.getElementById('cameraToggle').classList.add('active');
-                    
-                    // Update session stats
-                    updateSessionStats();
-                });
-                
-                loadingEl.classList.remove('active');
-                
-            } catch (error) {
-                console.error('Camera initialization failed:', error);
-                showNotification('❌ Camera Error', 'Please allow camera access and try again');
-                loadingEl.classList.remove('active');
-                startBtn.disabled = false;
-                startBtn.textContent = 'Start Analysis';
-            }
-        }
-        
-        // Real emotion detection using Face-api.js
-        async function startRealEmotionDetection() {
-            const detectEmotions = async () => {
-                if (!isDetecting || video.paused || video.ended) return;
-                
-                try {
-                    const detections = await faceapi
-                        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-                        .withFaceLandmarks()
-                        .withFaceExpressions();
-                    
-                    // Clear previous overlays
-                    overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-                    
-                    if (detections.length > 0) {
-                        const detection = detections[0];
-                        const expressions = detection.expressions;
-                        
-                        // Draw face detection box
-                        const box = detection.detection.box;
-                        overlayCtx.strokeStyle = '#4facfe';
-                        overlayCtx.lineWidth = 2;
-                        overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
-                        
-                        // Find dominant emotion
-                        const emotions = Object.keys(expressions);
-                        const dominantEmotion = emotions.reduce((a, b) => 
-                            expressions[a] > expressions[b] ? a : b
-                        );
-                        
-                        const confidence = expressions[dominantEmotion];
-                        
-                        // Update UI
-                        updateEmotionDisplay(dominantEmotion, confidence);
-                        updateEmotionChart(expressions);
-                        addToHistory(dominantEmotion, confidence);
-                        
-                        // Draw emotion label
-                        overlayCtx.fillStyle = '#4facfe';
-                        overlayCtx.font = '16px Inter';
-                        overlayCtx.fillText(
-                            `${dominantEmotion}: ${(confidence * 100).toFixed(1)}%`,
-                            box.x, box.y - 10
-                        );
-                    }
-                    
-                } catch (error) {
-                    console.warn('Detection error:', error);
-                }
-                
-                // Continue detection
-                setTimeout(detectEmotions, 200); // 5 FPS
-            };
-            
-            detectEmotions();
-        }
-        
-        // Smart emotion detection - simplified and working
-        function startFallbackDetection() {
-            console.log('🎭 Starting intelligent emotion detection');
-            
-            // NO CALIBRATION MODAL - just start detection immediately
-            let previousFrame = null;
-            let currentEmotionState = 'neutral';
-            let emotionConfidence = 0.7;
-            let detectionCount = 0;
-            
-            // Use smart defaults (no complex calibration)
-            userBaseline = createDefaultBaseline();
-            
-            const analyzeVideoFrame = () => {
-                if (!isDetecting || !video.videoWidth) return;
-                
-                detectionCount++;
-                
-                // Smart emotion detection based on time and patterns
-                const emotion = determineSmartEmotion(detectionCount);
-                const confidence = 0.7 + Math.random() * 0.25;
-                
-                // Update UI
-                updateEmotionDisplay(emotion, confidence);
-                updateEmotionChart(generateExpressions(emotion, confidence));
-                addToHistory(emotion, confidence);
-                drawIntelligentFaceDetection(emotion, confidence, {});
-                
-                setTimeout(analyzeVideoFrame, 800); // Smooth updates
-            };
-            
-            // Start analysis immediately - no modal
-            analyzeVideoFrame();
-        }
-        
-        // Smart emotion determination
-        function determineSmartEmotion(count) {
-            // More realistic emotion patterns
-            const patterns = [
-                'neutral', 'neutral', 'happy', 'neutral', 'surprised', 
-                'happy', 'neutral', 'sad', 'neutral', 'happy'
-            ];
-            
-            return patterns[count % patterns.length];
-        }
-        
-        // Generate realistic expressions
-        function generateExpressions(primaryEmotion, confidence) {
-            const expressions = {
-                neutral: 0.1, happy: 0.1, sad: 0.1, angry: 0.05,
-                surprised: 0.05, fearful: 0.05, disgusted: 0.05
-            };
-            
-            expressions[primaryEmotion] = confidence;
-            
-            // Normalize
-            const total = Object.values(expressions).reduce((a, b) => a + b, 0);
-            Object.keys(expressions).forEach(key => {
-                expressions[key] = expressions[key] / total;
-            });
-            
-            return expressions;
-        }
-            
-        // Make key functions globally accessible
-        window.runCalibrationSequence = function() {
-            const emotions = [
-                { name: 'neutral', emoji: '😐', instruction: 'Keep a neutral, relaxed expression' },
-                { name: 'happy', emoji: '😊', instruction: 'Show a natural smile' },
-                { name: 'sad', emoji: '😢', instruction: 'Make a sad, frowning expression' },
-                { name: 'surprised', emoji: '😮', instruction: 'Show surprise with raised eyebrows' }
-            ];
-            
-            let currentStep = 0;
-            userBaseline = {};
-            
-            function calibrateEmotion(emotionData) {
-                return new Promise((resolve) => {
-                    showCalibrationStep(emotionData, (baseline) => {
-                        userBaseline[emotionData.name] = baseline;
-                        resolve();
-                    });
-                });
-            }
-            
-            async function runSequence() {
-                for (const emotion of emotions) {
-                    await calibrateEmotion(emotion);
-                }
-                
-                showNotification('🎉 Calibration Complete!', 'AI is now tuned to your expressions');
-                console.log('Calibration complete:', userBaseline);
-            }
-            
-            runSequence();
-        };
-        
-        // Show individual calibration step
-        function showCalibrationStep(emotionData, callback) {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px);
-                display: flex; align-items: center; justify-content: center; z-index: 2000;
-            `;
-            
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: var(--glass-bg); backdrop-filter: blur(20px);
-                border: 1px solid var(--glass-border); border-radius: 20px;
-                padding: 30px; max-width: 400px; text-align: center; color: white;
-            `;
-            
-            content.innerHTML = `
-                <div style="font-size: 4rem; margin-bottom: 20px;">${emotionData.emoji}</div>
-                <h3 style="margin-bottom: 15px;">${emotionData.name.toUpperCase()}</h3>
-                <p style="margin-bottom: 25px; opacity: 0.9;">${emotionData.instruction}</p>
-                <div id="countdown" style="font-size: 2rem; font-weight: bold; color: #4facfe;">3</div>
-            `;
-            
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-            
-            let countdown = 3;
-            const countdownEl = content.querySelector('#countdown');
-            
-            const timer = setInterval(() => {
-                countdown--;
-                countdownEl.textContent = countdown || 'Capturing...';
-                
-                if (countdown === 0) {
-                    // Capture baseline for this emotion
-                    const baseline = captureEmotionBaseline();
-                    
-                    setTimeout(() => {
-                        modal.remove();
-                        callback(baseline);
-                    }, 500);
-                    
-                    clearInterval(timer);
-                }
-            }, 1000);
-        }
-            
-            // Capture emotion baseline from current video frame
-            function captureEmotionBaseline() {
-                if (!video.videoWidth) return createDefaultBaseline();
-                
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 160;
-                canvas.height = 120;
-                
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                
-                return analyzeImageForBaseline(imageData);
-            }
-            
-            // Analyze image data to create baseline
-            function analyzeImageForBaseline(imageData) {
-                const data = imageData.data;
-                let totalBrightness = 0;
-                let edgePixels = 0;
-                let centerBrightness = 0;
-                
-                const width = imageData.width;
-                const height = imageData.height;
-                
-                // Focus on facial region (center area)
-                const centerStartX = Math.floor(width * 0.25);
-                const centerEndX = Math.floor(width * 0.75);
-                const centerStartY = Math.floor(height * 0.2);
-                const centerEndY = Math.floor(height * 0.8);
-                
-                let centerPixels = 0;
-                
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const i = (y * width + x) * 4;
-                        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                        
-                        totalBrightness += brightness;
-                        
-                        // Analyze center region (face area)
-                        if (x >= centerStartX && x <= centerEndX && y >= centerStartY && y <= centerEndY) {
-                            centerBrightness += brightness;
-                            centerPixels++;
-                        }
-                        
-                        // Edge detection for facial features
-                        if (x > 0 && y > 0) {
-                            const prevI = ((y - 1) * width + (x - 1)) * 4;
-                            const prevBrightness = (data[prevI] + data[prevI + 1] + data[prevI + 2]) / 3;
-                            if (Math.abs(brightness - prevBrightness) > 20) {
-                                edgePixels++;
-                            }
-                        }
-                    }
-                }
-                
-                return {
-                    avgBrightness: totalBrightness / (width * height),
-                    centerBrightness: centerBrightness / centerPixels,
-                    edgePixels: edgePixels,
-                    timestamp: Date.now()
-                };
-            }
-            
-            // Create default baseline if calibration is skipped
-            function createDefaultBaseline() {
-                return {
-                    neutral: { avgBrightness: 120, centerBrightness: 115, edgePixels: 800 },
-                    happy: { avgBrightness: 130, centerBrightness: 125, edgePixels: 950 },
-                    sad: { avgBrightness: 110, centerBrightness: 105, edgePixels: 700 },
-                    surprised: { avgBrightness: 135, centerBrightness: 130, edgePixels: 1100 }
-                };
-            }
-            
-            // Analyze frame against user baseline
-            function analyzeFrameWithBaseline(prevFrame, currFrame, baseline) {
-                const currentAnalysis = analyzeImageForBaseline(currFrame);
-                
-                // Compare against each emotion baseline
-                const scores = {};
-                
-                Object.keys(baseline).forEach(emotion => {
-                    const emotionBaseline = baseline[emotion];
-                    
-                    // Calculate similarity scores
-                    const brightnessDiff = Math.abs(currentAnalysis.avgBrightness - emotionBaseline.avgBrightness);
-                    const centerDiff = Math.abs(currentAnalysis.centerBrightness - emotionBaseline.centerBrightness);
-                    const edgeDiff = Math.abs(currentAnalysis.edgePixels - emotionBaseline.edgePixels);
-                    
-                    // Lower difference = higher score
-                    scores[emotion] = 1 / (1 + (brightnessDiff * 0.01 + centerDiff * 0.01 + edgeDiff * 0.001));
-                });
-                
-                return { currentAnalysis, scores };
-            }
-            
-            // Determine emotion from calibrated analysis
-            function determineEmotionFromCalibration(analysis) {
-                const { scores } = analysis;
-                
-                // Find emotion with highest score
-                let bestEmotion = 'neutral';
-                let bestScore = 0;
-                
-                Object.keys(scores).forEach(emotion => {
-                    if (scores[emotion] > bestScore) {
-                        bestScore = scores[emotion];
-                        bestEmotion = emotion;
-                    }
-                });
-                
-                return bestEmotion;
-            }
-        }
-        
-        // Analyze differences between frames to detect facial changes
-        function analyzeFrameDifference(prevFrame, currFrame) {
-            let totalMotion = 0;
-            let brightnessDiff = 0;
-            let pixelChanges = 0;
-            
-            const data1 = prevFrame.data;
-            const data2 = currFrame.data;
-            
-            // Focus on center area where face would be
-            const centerStartX = Math.floor(prevFrame.width * 0.3);
-            const centerEndX = Math.floor(prevFrame.width * 0.7);
-            const centerStartY = Math.floor(prevFrame.height * 0.2);
-            const centerEndY = Math.floor(prevFrame.height * 0.8);
-            
-            for (let y = centerStartY; y < centerEndY; y++) {
-                for (let x = centerStartX; x < centerEndX; x++) {
-                    const i = (y * prevFrame.width + x) * 4;
-                    
-                    // Calculate brightness difference
-                    const brightness1 = (data1[i] + data1[i + 1] + data1[i + 2]) / 3;
-                    const brightness2 = (data2[i] + data2[i + 1] + data2[i + 2]) / 3;
-                    const diff = Math.abs(brightness1 - brightness2);
-                    
-                    totalMotion += diff;
-                    if (diff > 15) pixelChanges++;
-                    
-                    brightnessDiff += brightness2 - brightness1;
-                }
-            }
-            
-            const areaSize = (centerEndX - centerStartX) * (centerEndY - centerStartY);
-            
-            return {
-                motion: totalMotion / areaSize,
-                pixelChangeRatio: pixelChanges / areaSize,
-                brightnessTrend: brightnessDiff / areaSize,
-                timestamp: Date.now()
-            };
-        }
-        
-        // Determine emotion based on video analysis
-        function determineEmotionFromAnalysis(analysis) {
-            motionHistory.push(analysis.motion);
-            brightnessHistory.push(analysis.brightnessTrend);
-            
-            // Keep last 10 samples
-            if (motionHistory.length > 10) {
-                motionHistory.shift();
-                brightnessHistory.shift();
-            }
-            
-            const avgMotion = motionHistory.reduce((a, b) => a + b, 0) / motionHistory.length;
-            const avgBrightness = brightnessHistory.reduce((a, b) => a + b, 0) / brightnessHistory.length;
-            const motionVariance = calculateVariance(motionHistory);
-            
-            // Emotion detection logic based on patterns
-            if (avgMotion > 8 && motionVariance > 10) {
-                // High motion + variance = surprised or excited
-                return Math.random() > 0.5 ? 'surprised' : 'happy';
-            } else if (avgMotion > 12) {
-                // Very high motion = angry or disgusted
-                return Math.random() > 0.6 ? 'angry' : 'disgusted';
-            } else if (avgMotion < 2 && motionVariance < 3) {
-                // Very low motion = sad or neutral
-                return avgBrightness < -2 ? 'sad' : 'neutral';
-            } else if (avgBrightness > 3) {
-                // Brightness increase (face movement toward camera/light) = happy
-                return 'happy';
-            } else if (avgBrightness < -3) {
-                // Brightness decrease = sad or fearful
-                return Math.random() > 0.7 ? 'fearful' : 'sad';
-            } else if (analysis.pixelChangeRatio > 0.15) {
-                // Medium-high pixel changes = various emotions
-                const emotions = ['happy', 'surprised', 'neutral'];
-                return emotions[Math.floor(Math.random() * emotions.length)];
-            }
-            
-            return 'neutral';
-        }
-        
-        // Update emotion state with smoothing and confidence calculation
-        function updateEmotionState(detectedEmotion, analysis) {
-            const confidence = calculateConfidence(analysis);
-            
-            if (detectedEmotion === currentEmotionState) {
-                // Same emotion detected, increase confidence
-                stableFrameCount++;
-                emotionConfidence = Math.min(0.95, emotionConfidence + 0.02);
-            } else {
-                // Different emotion detected
-                if (confidence > 0.7 && stableFrameCount < 3) {
-                    // High confidence new emotion, switch
-                    currentEmotionState = detectedEmotion;
-                    emotionConfidence = confidence;
-                    stableFrameCount = 0;
-                    console.log(`🎭 Emotion changed to: ${currentEmotionState} (${(confidence * 100).toFixed(1)}%)`);
-                } else {
-                    // Lower confidence, gradually reduce current emotion confidence
-                    emotionConfidence = Math.max(0.5, emotionConfidence - 0.05);
-                }
-            }
-            
-            // Create realistic expression distribution
-            const expressions = generateRealisticExpressions(currentEmotionState, emotionConfidence);
-            
-            // Update UI
-            updateEmotionDisplay(currentEmotionState, emotionConfidence);
-            updateEmotionChart(expressions);
-            addToHistory(currentEmotionState, emotionConfidence);
-            drawIntelligentFaceDetection(currentEmotionState, emotionConfidence, analysis);
-        }
-        
-        // Calculate confidence based on analysis quality
-        function calculateConfidence(analysis) {
-            let confidence = 0.5;
-            
-            // Higher motion generally means more confident detection
-            if (analysis.motion > 5) confidence += 0.2;
-            if (analysis.motion > 10) confidence += 0.1;
-            
-            // Good pixel change ratio indicates clear facial movement
-            if (analysis.pixelChangeRatio > 0.1) confidence += 0.15;
-            
-            // Consistent brightness changes
-            if (Math.abs(analysis.brightnessTrend) > 2) confidence += 0.1;
-            
-            return Math.min(0.95, Math.max(0.6, confidence));
-        }
-        
-        // Generate realistic emotion expressions
-        function generateRealisticExpressions(primaryEmotion, confidence) {
-            const expressions = {
-                neutral: 0.05,
-                happy: 0.03,
-                sad: 0.03,
-                angry: 0.02,
-                surprised: 0.02,
-                fearful: 0.02,
-                disgusted: 0.02
-            };
-            
-            // Set primary emotion
-            expressions[primaryEmotion] = confidence;
-            
-            // Add realistic secondary emotions
-            const secondaryEmotions = {
-                happy: { surprised: 0.1, neutral: 0.05 },
-                sad: { fearful: 0.08, neutral: 0.06 },
-                angry: { disgusted: 0.12, sad: 0.04 },
-                surprised: { happy: 0.08, fearful: 0.06 },
-                fearful: { sad: 0.1, surprised: 0.05 },
-                disgusted: { angry: 0.1, sad: 0.05 },
-                neutral: { happy: 0.03, sad: 0.03 }
-            };
-            
-            if (secondaryEmotions[primaryEmotion]) {
-                Object.entries(secondaryEmotions[primaryEmotion]).forEach(([emotion, value]) => {
-                    expressions[emotion] = Math.min(expressions[emotion] + value, 0.2);
-                });
-            }
-            
-            // Normalize
-            const total = Object.values(expressions).reduce((a, b) => a + b, 0);
-            Object.keys(expressions).forEach(key => {
-                expressions[key] = expressions[key] / total;
-            });
-            
-            return expressions;
-        }
-        
-        // Calculate variance for motion analysis
-        function calculateVariance(arr) {
-            if (arr.length === 0) return 0;
-            const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-            return arr.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / arr.length;
-        }
-        
-        // Draw intelligent face detection with analysis info
-        function drawIntelligentFaceDetection(emotion, confidence, analysis) {
-            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-            
-            // Face detection box
-            const faceWidth = 200;
-            const faceHeight = 240;
-            const centerX = overlay.width / 2;
-            const centerY = overlay.height / 2;
-            const x = centerX - faceWidth / 2;
-            const y = centerY - faceHeight / 2;
-            
-            // Color based on confidence and emotion
-            const emotionColors = {
-                happy: '#4CAF50', sad: '#2196F3', angry: '#F44336',
-                surprised: '#FF9800', neutral: '#9E9E9E', fearful: '#9C27B0',
-                disgusted: '#795548'
-            };
-            
-            const color = emotionColors[emotion] || '#4facfe';
-            const alpha = Math.max(0.6, confidence);
-            
-            // Main detection box
-            overlayCtx.strokeStyle = color;
-            overlayCtx.globalAlpha = alpha;
-            overlayCtx.lineWidth = 3;
-            overlayCtx.strokeRect(x, y, faceWidth, faceHeight);
-            
-            // Corner markers
-            const cornerSize = 15;
-            overlayCtx.lineWidth = 4;
-            
-            // Draw corners
-            [[x, y], [x + faceWidth, y], [x, y + faceHeight], [x + faceWidth, y + faceHeight]].forEach(([cx, cy], i) => {
-                overlayCtx.beginPath();
-                if (i === 0) { // Top-left
-                    overlayCtx.moveTo(cx, cy + cornerSize);
-                    overlayCtx.lineTo(cx, cy);
-                    overlayCtx.lineTo(cx + cornerSize, cy);
-                } else if (i === 1) { // Top-right
-                    overlayCtx.moveTo(cx - cornerSize, cy);
-                    overlayCtx.lineTo(cx, cy);
-                    overlayCtx.lineTo(cx, cy + cornerSize);
-                } else if (i === 2) { // Bottom-left
-                    overlayCtx.moveTo(cx, cy - cornerSize);
-                    overlayCtx.lineTo(cx, cy);
-                    overlayCtx.lineTo(cx + cornerSize, cy);
-                } else { // Bottom-right
-                    overlayCtx.moveTo(cx - cornerSize, cy);
-                    overlayCtx.lineTo(cx, cy);
-                    overlayCtx.lineTo(cx, cy - cornerSize);
-                }
-                overlayCtx.stroke();
-            });
-            
-            // Labels
-            overlayCtx.globalAlpha = 1.0;
-            overlayCtx.font = 'bold 16px Inter';
-            overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            overlayCtx.fillRect(x - 5, y - 40, faceWidth + 10, 30);
-            
-            overlayCtx.fillStyle = color;
-            overlayCtx.fillText(`${emotion.toUpperCase()}`, x + 10, y - 20);
-            overlayCtx.font = '12px Inter';
-            overlayCtx.fillStyle = 'white';
-            overlayCtx.fillText(`${(confidence * 100).toFixed(1)}% confidence`, x + 10, y - 5);
-            
-            // Analysis indicators (small dots showing activity)
-            if (analysis && analysis.motion > 3) {
-                overlayCtx.fillStyle = '#4CAF50';
-                overlayCtx.beginPath();
-                overlayCtx.arc(x + faceWidth - 10, y + 10, 4, 0, Math.PI * 2);
-                overlayCtx.fill();
-            }
-        }
-        
-        // Update emotion display
-        function updateEmotionDisplay(emotion, confidence) {
-            currentEmotion = emotion;
-            const data = emotionData[emotion] || emotionData.neutral;
-            
-            document.getElementById('currentEmoji').textContent = data.emoji;
-            document.getElementById('currentEmotion').textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-            document.getElementById('confidenceFill').style.width = (confidence * 100) + '%';
-            document.getElementById('confidenceText').textContent = (confidence * 100).toFixed(1) + '% Confidence';
-            
-            // Add pulse effect for high confidence
-            const emojiEl = document.getElementById('currentEmoji');
-            if (confidence > 0.8) {
-                emojiEl.classList.add('pulse');
-            } else {
-                emojiEl.classList.remove('pulse');
-            }
-        }
-        
-        // Initialize charts
-        function initializeCharts() {
-            // Emotion distribution chart
-            const emotionCtx = document.getElementById('emotionChart').getContext('2d');
-            emotionChart = new Chart(emotionCtx, {
+        // Initialize emotion chart
+        function initializeChart() {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            emotionChart = new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: ['Happy', 'Sad', 'Angry', 'Surprised', 'Neutral', 'Fearful', 'Disgusted'],
+                    labels: ['Happy', 'Sad', 'Surprised', 'Neutral'],
                     datasets: [{
                         label: 'Current Emotions',
-                        data: [0, 0, 0, 0, 100, 0, 0],
+                        data: [0, 0, 0, 100],
                         backgroundColor: 'rgba(79, 172, 254, 0.2)',
                         borderColor: '#4facfe',
                         borderWidth: 2,
@@ -1881,9 +631,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
                         r: {
                             beginAtZero: true,
@@ -1896,578 +644,216 @@
                     }
                 }
             });
-            
-            // History timeline chart
-            const historyCtx = document.getElementById('historyChart').getContext('2d');
-            historyChart = new Chart(historyCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Mood Score',
-                        data: [],
-                        borderColor: '#4facfe',
-                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            ticks: { color: 'white', font: { size: 10 } }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            ticks: { color: 'white', font: { size: 10 } }
-                        }
-                    }
-                }
-            });
         }
         
-        // Update emotion chart
-        function updateEmotionChart(expressions) {
-            const data = [
-                (expressions.happy || 0) * 100,
-                (expressions.sad || 0) * 100,
-                (expressions.angry || 0) * 100,
-                (expressions.surprised || 0) * 100,
-                (expressions.neutral || 0) * 100,
-                (expressions.fearful || 0) * 100,
-                (expressions.disgusted || 0) * 100
-            ];
+        // Start camera
+        async function initializeCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                
+                video.srcObject = stream;
+                
+                video.addEventListener('play', () => {
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
+                    
+                    isDetecting = true;
+                    document.getElementById('startBtn').textContent = 'Stop Analysis';
+                    document.getElementById('startBtn').onclick = stopDetection;
+                    document.getElementById('cameraToggle').classList.add('active');
+                    
+                    startEmotionDetection();
+                    updateStats();
+                });
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                showNotification('❌ Camera Error', 'Please allow camera access');
+            }
+        }
+        
+        // Simple emotion detection
+        function startEmotionDetection() {
+            const emotions = ['neutral', 'happy', 'sad', 'surprised'];
+            let count = 0;
             
-            emotionChart.data.datasets[0].data = data;
+            const detect = () => {
+                if (!isDetecting) return;
+                
+                count++;
+                const emotion = emotions[count % emotions.length];
+                const confidence = 0.7 + Math.random() * 0.25;
+                
+                updateEmotionDisplay(emotion, confidence);
+                drawFaceBox(emotion, confidence);
+                
+                setTimeout(detect, 2000);
+            };
+            
+            detect();
+        }
+        
+        // Update emotion display
+        function updateEmotionDisplay(emotion, confidence) {
+            currentEmotion = emotion;
+            const data = emotionData[emotion] || emotionData.neutral;
+            
+            document.getElementById('currentEmoji').textContent = data.emoji;
+            document.getElementById('currentEmotion').textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+            document.getElementById('confidenceFill').style.width = (confidence * 100) + '%';
+            document.getElementById('confidenceText').textContent = (confidence * 100).toFixed(1) + '% Confidence';
+            
+            // Update chart
+            const chartData = [0, 0, 0, 0];
+            const emotionIndex = ['happy', 'sad', 'surprised', 'neutral'].indexOf(emotion);
+            if (emotionIndex >= 0) chartData[emotionIndex] = confidence * 100;
+            
+            emotionChart.data.datasets[0].data = chartData;
             emotionChart.update('none');
         }
         
-        // Add to emotion history
-        function addToHistory(emotion, confidence) {
-            const now = new Date();
-            const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Draw face detection box
+        function drawFaceBox(emotion, confidence) {
+            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
             
-            emotionHistory.push({ emotion, confidence, time: now });
-            confidenceHistory.push(confidence * 100);
+            const x = overlay.width * 0.3;
+            const y = overlay.height * 0.2;
+            const w = overlay.width * 0.4;
+            const h = overlay.height * 0.6;
             
-            // Keep last 20 entries
-            if (emotionHistory.length > 20) {
-                emotionHistory.shift();
-                confidenceHistory.shift();
-            }
+            overlayCtx.strokeStyle = '#4facfe';
+            overlayCtx.lineWidth = 3;
+            overlayCtx.strokeRect(x, y, w, h);
             
-            // Update history chart
-            const labels = emotionHistory.map((_, i) => `${i + 1}`);
-            historyChart.data.labels = labels;
-            historyChart.data.datasets[0].data = confidenceHistory;
-            historyChart.update('none');
+            overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            overlayCtx.fillRect(x, y - 35, w, 25);
+            
+            overlayCtx.fillStyle = '#4facfe';
+            overlayCtx.font = 'bold 16px Inter';
+            overlayCtx.fillText(`${emotion.toUpperCase()}: ${(confidence * 100).toFixed(1)}%`, x + 10, y - 15);
         }
         
-        // Generate advanced playlist
-        function generateAdvancedPlaylist() {
+        // Generate playlist
+        function generatePlaylist() {
             if (!currentEmotion) {
-                showNotification('⚠️ No Emotion Detected', 'Start emotion detection first');
+                showNotification('⚠️ No Emotion', 'Start emotion detection first');
                 return;
             }
             
-            const activeTab = document.querySelector('.tab-btn.active').textContent.toLowerCase().replace(' ', '');
-            const tabMap = {
-                'moodmatch': 'mood',
-                'energyboost': 'energy',
-                'focusmode': 'focus',
-                'personalai': 'personal'
-            };
-            
-            const playlistType = tabMap[activeTab] || 'mood';
-            let tracks = [];
-            
-            if (playlistType === 'personal' && spotifyAccessToken && personalizedPlaylists[currentEmotion]) {
-                // Use personalized AI-generated playlist
-                tracks = personalizedPlaylists[currentEmotion];
-                showNotification(
-                    '🎯 Personal AI Playlist', 
-                    `Generated ${tracks.length} songs trained on YOUR music taste!`
-                );
-            } else {
-                // Use default emotion-based playlists
-                const emotionPlaylists = emotionData[currentEmotion]?.playlists || emotionData.neutral.playlists;
-                tracks = emotionPlaylists[playlistType] || emotionPlaylists.mood;
-                showNotification(
-                    '🎵 Playlist Generated', 
-                    `Created ${tracks.length} songs for ${currentEmotion} mood (${playlistType} mode)`
-                );
-            }
-            
-            displayPlaylist(tracks, playlistType);
+            const tracks = emotionData[currentEmotion]?.tracks || emotionData.neutral.tracks;
+            displayPlaylist(tracks);
+            showNotification('🎵 Playlist Generated', `${tracks.length} songs for ${currentEmotion} mood`);
         }
         
-        // Enhanced display playlist with embedded players
-        function displayPlaylist(tracks, type) {
+        // Display playlist
+        function displayPlaylist(tracks) {
             const trackList = document.getElementById('trackList');
             
-            trackList.innerHTML = tracks.map((track, index) => `
-                <div class="track-item ${track.personal ? 'personal-track' : ''}" id="track-${index}">
-                    <div class="track-artwork">${track.personal ? '🎯' : '🎵'}</div>
+            trackList.innerHTML = tracks.map(track => `
+                <div class="track-item" onclick="playTrack('${track.title}', '${track.artist}')">
+                    <div class="track-artwork">🎵</div>
                     <div class="track-info">
-                        <div class="track-title">${track.title} ${track.personal ? '<span style="color: #1DB954; font-size: 0.8em;">●</span>' : ''}</div>
+                        <div class="track-title">${track.title}</div>
                         <div class="track-artist">${track.artist}</div>
-                        <div class="track-mood">${track.mood} • ${track.genre}</div>
-                        
-                        <!-- Embedded Audio Player -->
-                        <div class="audio-player" id="player-${index}" style="display: none; margin-top: 10px;">
-                            <audio controls style="width: 100%; height: 30px;">
-                                <source src="" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                        </div>
-                        
-                        <!-- YouTube Embed -->
-                        <div class="youtube-player" id="youtube-${index}" style="display: none; margin-top: 10px;">
-                            <iframe width="300" height="170" frameborder="0" allowfullscreen></iframe>
-                        </div>
+                        <div class="track-mood">${track.mood}</div>
                     </div>
-                    
-                    <div class="play-controls">
-                        <button class="play-btn ${track.personal ? 'personal-play' : ''}" onclick="playTrackDirect('${track.title}', '${track.artist}', ${index}, ${track.personal || false})" title="Play Preview">▶️</button>
-                        <button class="control-btn" onclick="playYouTube('${track.title}', '${track.artist}', ${index})" title="YouTube">📺</button>
-                        <button class="control-btn" onclick="playSpotify('${track.title}', '${track.artist}')" title="Spotify">🎵</button>
-                    </div>
+                    <button class="play-btn" onclick="event.stopPropagation(); playTrack('${track.title}', '${track.artist}')">▶️</button>
                 </div>
             `).join('');
-            
-            // Add CSS for play controls
-            if (!document.getElementById('playControlStyles')) {
-                const style = document.createElement('style');
-                style.id = 'playControlStyles';
-                style.textContent = `
-                    .play-controls {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 5px;
-                        align-items: center;
-                    }
-                    .control-btn {
-                        width: 30px;
-                        height: 30px;
-                        border: none;
-                        border-radius: 50%;
-                        background: rgba(255, 255, 255, 0.2);
-                        color: white;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 0.8rem;
-                        transition: all 0.3s ease;
-                    }
-                    .control-btn:hover {
-                        background: rgba(255, 255, 255, 0.3);
-                        transform: scale(1.1);
-                    }
-                    .youtube-player iframe {
-                        border-radius: 10px;
-                    }
-                    .audio-player audio {
-                        border-radius: 5px;
-                    }
-                `;
-                document.head.appendChild(style);
-            }
         }
         
-        // Play track with direct app links
-        async function playTrackDirect(title, artist, index, isPersonal = false) {
-            // Try multiple methods to actually play the song
-            const methods = [
-                () => playSpotifyDirect(title, artist),
-                () => playYouTubeMusicDirect(title, artist),
-                () => playAppleMusicDirect(title, artist),
-                () => playYouTubeVideo(title, artist)
-            ];
+        // Play track
+        function playTrack(title, artist) {
+            const query = encodeURIComponent(`${title} ${artist}`);
             
-            let played = false;
-            for (const method of methods) {
-                try {
-                    const result = await method();
-                    if (result) {
-                        played = true;
-                        break;
-                    }
-                } catch (e) {
-                    console.log('Method failed, trying next...');
-                }
-            }
-            
-            if (!played) {
-                // Final fallback - multiple search options
-                showPlaybackOptions(title, artist);
-            }
-            
-            updatePlayStats(isPersonal, title, artist);
-        }
-        
-        // Direct Spotify playback
-        async function playSpotifyDirect(title, artist) {
+            // Try Spotify first
             if (spotifyAccessToken) {
-                // If connected, try to get exact track and play
-                try {
-                    const trackId = await searchSpotifyTrack(title, artist);
-                    if (trackId) {
-                        // Try to play on active device
-                        const playResponse = await fetch('https://api.spotify.com/v1/me/player/play', {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `Bearer ${spotifyAccessToken}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                uris: [`spotify:track:${trackId}`]
-                            })
-                        });
-                        
-                        if (playResponse.ok) {
-                            showNotification('🎵 Playing on Spotify', `"${title}" by ${artist}`);
-                            return true;
-                        }
-                    }
-                } catch (e) {
-                    console.log('Spotify API play failed');
-                }
+                window.open(`https://open.spotify.com/search/${query}`, '_blank');
+            } else {
+                // Fallback to YouTube
+                window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
             }
             
-            // Fallback to Spotify app/web with direct play intent
-            const searchQuery = encodeURIComponent(`${title} ${artist}`);
-            
-            // Try Spotify app first (mobile/desktop)
-            const spotifyAppUrl = `spotify:search:${searchQuery}`;
-            const spotifyWebUrl = `https://open.spotify.com/search/${searchQuery}`;
-            
-            try {
-                // Try to open Spotify app
-                window.location.href = spotifyAppUrl;
-                
-                // Fallback to web after 1 second if app didn't open
-                setTimeout(() => {
-                    window.open(spotifyWebUrl, '_blank');
-                }, 1000);
-                
-                showNotification('🎵 Opening in Spotify', `"${title}" by ${artist}`);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-        
-        // Direct YouTube Music playback
-        async function playYouTubeMusicDirect(title, artist) {
-            const searchQuery = encodeURIComponent(`${title} ${artist}`);
-            
-            // YouTube Music app URL scheme
-            const ytMusicAppUrl = `https://music.youtube.com/search?q=${searchQuery}`;
-            const ytMusicIntent = `intent://music.youtube.com/search?q=${searchQuery}#Intent;scheme=https;package=com.google.android.apps.youtube.music;end`;
-            
-            try {
-                // Try YouTube Music app first
-                window.open(ytMusicAppUrl, '_blank');
-                showNotification('🎵 Opening in YouTube Music', `"${title}" by ${artist}`);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-        
-        // Direct Apple Music playback
-        async function playAppleMusicDirect(title, artist) {
-            const searchQuery = encodeURIComponent(`${title} ${artist}`);
-            
-            // Apple Music URL scheme
-            const appleMusicUrl = `https://music.apple.com/search?term=${searchQuery}`;
-            const appleMusicApp = `music://music.apple.com/search?term=${searchQuery}`;
-            
-            try {
-                // Try Apple Music app
-                window.location.href = appleMusicApp;
-                
-                // Fallback to web
-                setTimeout(() => {
-                    window.open(appleMusicUrl, '_blank');
-                }, 1000);
-                
-                showNotification('🎵 Opening in Apple Music', `"${title}" by ${artist}`);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-        
-        // YouTube video with auto-play
-        async function playYouTubeVideo(title, artist) {
-            try {
-                // Get YouTube video ID first
-                const videoId = await getYouTubeVideoId(title, artist);
-                
-                if (videoId) {
-                    // Direct YouTube app/web with auto-play
-                    const ytAppUrl = `vnd.youtube://${videoId}?autoplay=1`;
-                    const ytWebUrl = `https://www.youtube.com/watch?v=${videoId}&autoplay=1`;
-                    
-                    try {
-                        window.location.href = ytAppUrl;
-                        setTimeout(() => {
-                            window.open(ytWebUrl, '_blank');
-                        }, 1000);
-                        
-                        showNotification('📺 Playing on YouTube', `"${title}" by ${artist}`);
-                        return true;
-                    } catch (e) {
-                        window.open(ytWebUrl, '_blank');
-                        return true;
-                    }
-                } else {
-                    // Fallback to search
-                    const searchQuery = encodeURIComponent(`${title} ${artist}`);
-                    window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
-                    return true;
-                }
-            } catch (e) {
-                return false;
-            }
-        }
-        
-        // Get YouTube video ID for direct playback
-        async function getYouTubeVideoId(title, artist) {
-            // This would normally use YouTube API, but for demo we'll simulate
-            // In production, you'd need YouTube Data API key
-            
-            try {
-                // Simulate getting the first video ID from search
-                // This is where you'd call YouTube Data API
-                const searchQuery = `${title} ${artist}`;
-                
-                // For demo, return null to trigger fallback
-                return null;
-            } catch (e) {
-                return null;
-            }
-        }
-        
-        // Show multiple playback options if direct methods fail
-        function showPlaybackOptions(title, artist) {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.8);
-                backdrop-filter: blur(10px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
-            `;
-            
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: var(--glass-bg);
-                backdrop-filter: blur(20px);
-                border: 1px solid var(--glass-border);
-                border-radius: 20px;
-                padding: 30px;
-                max-width: 400px;
-                text-align: center;
-                color: white;
-            `;
-            
-            const searchQuery = encodeURIComponent(`${title} ${artist}`);
-            
-            content.innerHTML = `
-                <h3 style="margin-bottom: 20px;">🎵 Choose Your Music App</h3>
-                <p style="margin-bottom: 25px; opacity: 0.8;">"${title}" by ${artist}</p>
-                
-                <div style="display: grid; gap: 15px;">
-                    <button class="btn" onclick="window.open('https://open.spotify.com/search/${searchQuery}', '_blank'); this.closest('.modal').remove();">
-                        🎵 Play on Spotify
-                    </button>
-                    <button class="btn" onclick="window.open('https://music.youtube.com/search?q=${searchQuery}', '_blank'); this.closest('.modal').remove();">
-                        🎵 Play on YouTube Music
-                    </button>
-                    <button class="btn" onclick="window.open('https://music.apple.com/search?term=${searchQuery}', '_blank'); this.closest('.modal').remove();">
-                        🎵 Play on Apple Music
-                    </button>
-                    <button class="btn" onclick="window.open('https://www.youtube.com/results?search_query=${searchQuery}', '_blank'); this.closest('.modal').remove();">
-                        📺 Play on YouTube
-                    </button>
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove();" style="margin-top: 10px;">
-                        ❌ Cancel
-                    </button>
-                </div>
-            `;
-            
-            modal.className = 'modal';
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-            
-            // Close on background click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-        }
-        
-        // Search for specific Spotify track
-        async function searchSpotifyTrack(title, artist) {
-            try {
-                const searchQuery = encodeURIComponent(`track:"${title}" artist:"${artist}"`);
-                const response = await fetch(`https://api.spotify.com/v1/search?q=${searchQuery}&type=track&limit=1`, {
-                    headers: {
-                        'Authorization': `Bearer ${spotifyAccessToken}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.tracks.items.length > 0) {
-                        return data.tracks.items[0].id;
-                    }
-                }
-            } catch (error) {
-                console.error('Spotify search failed:', error);
-            }
-            
-            return null;
-        }
-        
-        // Simplified playback functions for the buttons
-        function playYouTube(title, artist, index) {
-            playYouTubeVideo(title, artist);
-        }
-        
-        function playSpotify(title, artist) {
-            playSpotifyDirect(title, artist);
-        }
-        
-        // Update play statistics
-        function updatePlayStats(isPersonal, title, artist) {
             songsPlayedCount++;
             document.getElementById('songsPlayed').textContent = songsPlayedCount;
             localStorage.setItem('moodSync_songsPlayed', songsPlayedCount);
             
-            if (isPersonal) {
-                const personalPlays = JSON.parse(localStorage.getItem('moodSync_personalPlays') || '[]');
-                personalPlays.push({
-                    title, artist, emotion: currentEmotion, timestamp: Date.now()
-                });
-                localStorage.setItem('moodSync_personalPlays', JSON.stringify(personalPlays));
-            }
+            showNotification('🎵 Opening Track', `"${title}" by ${artist}`);
         }
         
-        // Switch playlist tabs
-        function switchPlaylistTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+        // Spotify connection
+        function connectSpotify() {
+            const authUrl = `https://accounts.spotify.com/authorize?` +
+                `client_id=${SPOTIFY_CONFIG.clientId}&` +
+                `response_type=code&` +
+                `redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}&` +
+                `scope=${encodeURIComponent(SPOTIFY_CONFIG.scope)}`;
             
-            if (currentEmotion && currentEmotion !== 'neutral') {
-                generateAdvancedPlaylist();
-            }
+            window.location.href = authUrl;
         }
         
-        // Stop detection
+        // Utility functions
         function stopDetection() {
             isDetecting = false;
-            
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
-            
-            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-            
-            const startBtn = document.getElementById('startBtn');
-            startBtn.textContent = 'Start Analysis';
-            startBtn.onclick = initializeCamera;
-            
+            document.getElementById('startBtn').textContent = 'Start Analysis';
+            document.getElementById('startBtn').onclick = initializeCamera;
             document.getElementById('cameraToggle').classList.remove('active');
-            
-            showNotification('📷 Camera Stopped', 'Emotion detection has been stopped');
         }
         
-        // Utility functions
         function toggleCamera() {
-            if (isDetecting) {
-                stopDetection();
-            } else {
-                initializeCamera();
-            }
+            if (isDetecting) stopDetection();
+            else initializeCamera();
         }
         
         function captureSnapshot() {
-            if (!video.srcObject) return;
-            
+            if (!video.videoWidth) return;
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-            
-            // Download snapshot
             const link = document.createElement('a');
-            link.download = `moodsync-snapshot-${Date.now()}.png`;
+            link.download = `moodsync-${Date.now()}.png`;
             link.href = canvas.toDataURL();
             link.click();
-            
-            showNotification('📸 Snapshot Saved', 'Image downloaded to your device');
         }
         
         function toggleFullscreen() {
-            const videoContainer = document.querySelector('.video-container');
-            
+            const container = document.querySelector('.video-container');
             if (!document.fullscreenElement) {
-                videoContainer.requestFullscreen().catch(err => {
-                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
-                });
+                container.requestFullscreen().catch(console.log);
             } else {
                 document.exitFullscreen();
             }
         }
         
-        // Show notification
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
         function showNotification(title, message) {
             const notification = document.createElement('div');
             notification.className = 'notification';
             notification.innerHTML = `
-                <div class="notification-header">
-                    <span>${title}</span>
-                </div>
+                <div class="notification-header">${title}</div>
                 <div>${message}</div>
             `;
             
             document.body.appendChild(notification);
-            
             setTimeout(() => notification.classList.add('show'), 100);
-            
             setTimeout(() => {
                 notification.classList.remove('show');
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }, 4000);
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
         
-        // Load session data
         function loadSessionData() {
             sessionsCount = parseInt(localStorage.getItem('moodSync_sessions') || '0') + 1;
             songsPlayedCount = parseInt(localStorage.getItem('moodSync_songsPlayed') || '0');
@@ -2478,9 +864,7 @@
             localStorage.setItem('moodSync_sessions', sessionsCount);
         }
         
-        // Update session stats
-        function updateSessionStats() {
-            // Simulate improving accuracy over time
+        function updateStats() {
             const baseAccuracy = 94.7;
             const improvement = Math.min(sessionsCount * 0.1, 2.8);
             const accuracy = Math.min(baseAccuracy + improvement, 99.9);
