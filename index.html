@@ -724,32 +724,333 @@
             'surprised': { emoji: '😲', color: '#e67e22' }
         };
 
-        // Music recommendations with real URIs and YouTube video IDs
+        // Enhanced music recommendations with real URIs and YouTube video IDs
         const MUSIC_RECOMMENDATIONS = {
             'happy': [
-                { name: "Good 4 U", artist: "Olivia Rodrigo", uri: "spotify:track:4ZtFanR9U6ndgddUvNcjcG", youtubeId: "gNi_6U5Pm_o", match: "95%" },
-                { name: "Blinding Lights", artist: "The Weeknd", uri: "spotify:track:0VjIjW4GlUK7tuDqZgJ6Ny", youtubeId: "4NRXx6U8ABQ", match: "92%" },
-                { name: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", uri: "spotify:track:32OlwWuMpZ6b0aN2RZOeMS", youtubeId: "OPf0YbXqDm0", match: "90%" },
-                { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", uri: "spotify:track:6JV5LYLY4k8bvr7Lxyq64Z", youtubeId: "ru0K8uYEZWw", match: "88%" },
-                { name: "Happy", artist: "Pharrell Williams", uri: "spotify:track:60nZcImufyMA1MKQY3dcCH", youtubeId: "ZbZSe6N_BXs", match: "95%" }
+                { name: "Good 4 U", artist: "Olivia Rodrigo", uri: "spotify:track:4ZtFanR9U6ndgddUvNcjcG", youtubeId: "gNi_6U5Pm_o", match: "95%", features: { valence: 0.84, energy: 0.89, danceability: 0.78 } },
+                { name: "Blinding Lights", artist: "The Weeknd", uri: "spotify:track:0VjIjW4GlUK7tuDqZgJ6Ny", youtubeId: "4NRXx6U8ABQ", match: "92%", features: { valence: 0.76, energy: 0.73, danceability: 0.81 } },
+                { name: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", uri: "spotify:track:32OlwWuMpZ6b0aN2RZOeMS", youtubeId: "OPf0YbXqDm0", match: "90%", features: { valence: 0.88, energy: 0.95, danceability: 0.87 } },
+                { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", uri: "spotify:track:6JV5LYLY4k8bvr7Lxyq64Z", youtubeId: "ru0K8uYEZWw", match: "88%", features: { valence: 0.94, energy: 0.85, danceability: 0.83 } },
+                { name: "Happy", artist: "Pharrell Williams", uri: "spotify:track:60nZcImufyMA1MKQY3dcCH", youtubeId: "ZbZSe6N_BXs", match: "95%", features: { valence: 0.96, energy: 0.82, danceability: 0.79 } }
             ],
             'sad': [
-                { name: "Someone Like You", artist: "Adele", uri: "spotify:track:1zwMYTA5nlNjZxYrvBB2pV", youtubeId: "hLQl3WQQoQ0", match: "93%" },
-                { name: "The Night We Met", artist: "Lord Huron", uri: "spotify:track:0ct6r3EGTcMLPtrXHDvVjc", youtubeId: "KtlgYxa6BMU", match: "91%" },
-                { name: "Hurt", artist: "Johnny Cash", uri: "spotify:track:4gMgiXfqyzZLMhsksGmbQV", youtubeId: "8AHCfZTRGiI", match: "89%" },
-                { name: "Mad World", artist: "Gary Jules", uri: "spotify:track:3JOVTQ5h8HGFnDdp4VT3MP", youtubeId: "4N3N1MlvVc4", match: "87%" },
-                { name: "Tears in Heaven", artist: "Eric Clapton", uri: "spotify:track:6v3KW9xbzN5yKLt9YKDYA2", youtubeId: "JxPj3GAYYZ0", match: "85%" }
+                { name: "Someone Like You", artist: "Adele", uri: "spotify:track:1zwMYTA5nlNjZxYrvBB2pV", youtubeId: "hLQl3WQQoQ0", match: "93%", features: { valence: 0.18, energy: 0.34, danceability: 0.42 } },
+                { name: "The Night We Met", artist: "Lord Huron", uri: "spotify:track:0ct6r3EGTcMLPtrXHDvVjc", youtubeId: "KtlgYxa6BMU", match: "91%", features: { valence: 0.23, energy: 0.29, danceability: 0.38 } },
+                { name: "Hurt", artist: "Johnny Cash", uri: "spotify:track:4gMgiXfqyzZLMhsksGmbQV", youtubeId: "8AHCfZTRGiI", match: "89%", features: { valence: 0.15, energy: 0.25, danceability: 0.35 } },
+                { name: "Mad World", artist: "Gary Jules", uri: "spotify:track:3JOVTQ5h8HGFnDdp4VT3MP", youtubeId: "4N3N1MlvVc4", match: "87%", features: { valence: 0.12, energy: 0.19, danceability: 0.31 } },
+                { name: "Tears in Heaven", artist: "Eric Clapton", uri: "spotify:track:6v3KW9xbzN5yKLt9YKDYA2", youtubeId: "JxPj3GAYYZ0", match: "85%", features: { valence: 0.21, energy: 0.31, danceability: 0.40 } }
             ],
             'angry': [
-                { name: "Break Stuff", artist: "Limp Bizkit", uri: "spotify:track:6OmhkSOpvYBokMKQxpIGx2", youtubeId: "ZpUYjpKg9KY", match: "94%" },
-                { name: "Bodies", artist: "Drowning Pool", uri: "spotify:track:51pQ7vY7WXzxskwloaeqyj", youtubeId: "04F4xlWSFh0", match: "92%" },
-                { name: "Killing in the Name", artist: "Rage Against the Machine", uri: "spotify:track:59WN2psjkt1tyaxjspN8fp", youtubeId: "bWXazVhlyxQ", match: "90%" },
-                { name: "Chop Suey!", artist: "System of a Down", uri: "spotify:track:50rrZ5K7HlBr2FaZtGWflD", youtubeId: "CSvFpBOe8eY", match: "88%" },
-                { name: "Given Up", artist: "Linkin Park", uri: "spotify:track:5a1iz510sv2W9Dt1MvFd5R", youtubeId: "0xyxtzD54rM", match: "86%" }
+                { name: "Break Stuff", artist: "Limp Bizkit", uri: "spotify:track:6OmhkSOpvYBokMKQxpIGx2", youtubeId: "ZpUYjpKg9KY", match: "94%", features: { valence: 0.31, energy: 0.98, danceability: 0.65 } },
+                { name: "Bodies", artist: "Drowning Pool", uri: "spotify:track:51pQ7vY7WXzxskwloaeqyj", youtubeId: "04F4xlWSFh0", match: "92%", features: { valence: 0.28, energy: 0.96, danceability: 0.63 } },
+                { name: "Killing in the Name", artist: "Rage Against the Machine", uri: "spotify:track:59WN2psjkt1tyaxjspN8fp", youtubeId: "bWXazVhlyxQ", match: "90%", features: { valence: 0.35, energy: 0.94, danceability: 0.67 } },
+                { name: "Chop Suey!", artist: "System of a Down", uri: "spotify:track:50rrZ5K7HlBr2FaZtGWflD", youtubeId: "CSvFpBOe8eY", match: "88%", features: { valence: 0.42, energy: 0.91, danceability: 0.58 } },
+                { name: "Given Up", artist: "Linkin Park", uri: "spotify:track:5a1iz510sv2W9Dt1MvFd5R", youtubeId: "0xyxtzD54rM", match: "86%", features: { valence: 0.25, energy: 0.89, danceability: 0.61 } }
             ],
             'surprised': [
-                { name: "Electric Feel", artist: "MGMT", uri: "spotify:track:3FtYBEfBqAlGO46NUDQSAt", youtubeId: "MmZexg8sxyk", match: "88%" },
-                { name: "Pumped Up Kicks", artist: "Foster the People", uri: "spotify:track:7w87IxuO7BDcJ3YUqCyMTT", youtubeId: "SDTZ7iX4vTQ", match: "85%" },
+                { name: "Electric Feel", artist: "MGMT", uri: "spotify:track:3FtYBEfBqAlGO46NUDQSAt", youtubeId: "MmZexg8sxyk", match: "88%", features: { valence: 0.67, energy: 0.72, danceability: 0.69 } },
+                { name: "Pumped Up Kicks", artist: "Foster the People", uri: "spotify:track:7w87IxuO7BDcJ3YUqCyMTT", youtubeId: "SDTZ7iX4vTQ", match: "85%", features: { valence: 0.54, energy: 0.68, danceability: 0.75 } },
+                { name: "Somebody That I Used to Know", artist: "Gotye", uri: "spotify:track:2JzZzZUQj3Qff7wapcbKjc", youtubeId: "8UVNT4wvIGY", match: "83%", features: { valence: 0.51, energy: 0.61, danceability: 0.64 } },
+                { name: "Radioactive", artist: "Imagine Dragons", uri: "spotify:track:4RCZjm5OROoqN7CQ8S9e1F", youtubeId: "ktvTqknDobU", match: "81%", features: { valence: 0.59, energy: 0.78, danceability: 0.62 } },
+                { name: "Feel It Still", artist: "Portugal. The Man", uri: "spotify:track:1OKmhQBtDgKvwNMQeXUsBa", youtubeId: "pBkHHoOIIn8", match: "79%", features: { valence: 0.63, energy: 0.74, danceability: 0.71 } }
+            ],
+            'fearful': [
+                { name: "Breathe Me", artist: "Sia", uri: "spotify:track:7K4PG6Xgf4ZRzHTYiWTRNI", youtubeId: "ghPcYqn0p4Y", match: "89%", features: { valence: 0.29, energy: 0.38, danceability: 0.45 } },
+                { name: "Heavy", artist: "Linkin Park ft. Kiiara", uri: "spotify:track:50JJSqHUf2RQ9xsHs0KMHg", youtubeId: "5dmQ3QWpy1Q", match: "87%", features: { valence: 0.34, energy: 0.51, danceability: 0.52 } },
+                { name: "Anxiety", artist: "Julia Michaels", uri: "spotify:track:1A5S3fzxxNJ34cXLBXdN8E", youtubeId: "IA8078QRBdg", match: "85%", features: { valence: 0.31, energy: 0.47, danceability: 0.56 } },
+                { name: "Stressed Out", artist: "Twenty One Pilots", uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", youtubeId: "pXRviuL6vMY", match: "83%", features: { valence: 0.42, energy: 0.58, danceability: 0.61 } },
+                { name: "Vulnerable", artist: "Selena Gomez", uri: "spotify:track:6Ic3gB2WgEK8IxFZb7e0AK", youtubeId: "x3bfa3DZ8JM", match: "81%", features: { valence: 0.38, energy: 0.49, danceability: 0.58 } }
+            ],
+            'disgusted': [
+                { name: "Bad Guy", artist: "Billie Eilish", uri: "spotify:track:2Fxmhks0bxGSBdJ92vM42m", youtubeId: "DyDfgMOUjCI", match: "86%", features: { valence: 0.43, energy: 0.59, danceability: 0.71 } },
+                { name: "Sick Boy", artist: "The Chainsmokers", uri: "spotify:track:3b2cBRWXXNp9PTDqsEtQPa", youtubeId: "lEi_XBg2Fpk", match: "84%", features: { valence: 0.39, energy: 0.67, danceability: 0.68 } },
+                { name: "Bury a Friend", artist: "Billie Eilish", uri: "spotify:track:1CsMKhwEmNnmvEeKWLwdWn", youtubeId: "HUHC9tYz8ik", match: "82%", features: { valence: 0.24, energy: 0.45, danceability: 0.73 } },
+                { name: "Bad Things", artist: "Machine Gun Kelly", uri: "spotify:track:6or1bKJiZ06IlK0vFvY75k", youtubeId: "2X_2IdybTV0", match: "80%", features: { valence: 0.46, energy: 0.71, danceability: 0.66 } },
+                { name: "Disease", artist: "Beartooth", uri: "spotify:track:1brw1QZS6WKE8NhwelLr2J", youtubeId: "lbYIUnV8u7E", match: "78%", features: { valence: 0.32, energy: 0.87, danceability: 0.59 } }
+            ],
+            'neutral': [
+                { name: "Weightless", artist: "Marconi Union", uri: "spotify:track:7KC5YnBGkmBWNdlcbLQh0z", youtubeId: "UfcAVejslrU", match: "85%", features: { valence: 0.45, energy: 0.12, danceability: 0.23 } },
+                { name: "Clair de Lune", artist: "Claude Debussy", uri: "spotify:track:1vyhJKp5tQnB5K5aaNH1oM", youtubeId: "CvFH_6DNRCY", match: "83%", features: { valence: 0.48, energy: 0.18, danceability: 0.29 } },
+                { name: "River", artist: "Leon Bridges", uri: "spotify:track:5Ks4g4HteObeZOiL0Ree4J", youtubeId: "0Hegd4xNfRo", match: "81%", features: { valence: 0.52, energy: 0.41, danceability: 0.67 } },
+                { name: "Holocene", artist: "Bon Iver", uri: "spotify:track:2takcwOaAZWiXQijPHIx7B", youtubeId: "TWcyIpul8OE", match: "79%", features: { valence: 0.43, energy: 0.34, danceability: 0.59 } },
+                { name: "Intro", artist: "The xx", uri: "spotify:track:3WdnHTUgFI4G5SjNEAZlOo", youtubeId: "_VPKfacgXao", match: "77%", features: { valence: 0.41, energy: 0.29, danceability: 0.45 } }
+            ]
+        };
+
+        // User profile and personalization variables
+        let userProfile = {
+            topTracks: [],
+            topArtists: [],
+            audioFeatures: {},
+            recentlyPlayed: [],
+            emotionHistory: {},
+            preferences: {
+                valence: 0.5,
+                energy: 0.5,
+                danceability: 0.5,
+                acousticness: 0.5,
+                instrumentalness: 0.5
+            },
+            isPersonalized: false
+        };
+
+        let personalizedRecommendations = {};
+
+        // Fetch user's Spotify data for personalization
+        async function analyzeUserProfile() {
+            if (!accessToken) {
+                console.log('No Spotify access token available');
+                return false;
+            }
+
+            try {
+                updateStatus('🔄 Analyzing your music taste...', 'loading');
+
+                // Fetch user's top tracks (last 6 months)
+                const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topTracksResponse.ok) {
+                    const topTracksData = await topTracksResponse.json();
+                    userProfile.topTracks = topTracksData.items;
+
+                    // Get audio features for top tracks
+                    const trackIds = userProfile.topTracks.map(track => track.id).join(',');
+                    const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (featuresResponse.ok) {
+                        const featuresData = await featuresResponse.json();
+                        userProfile.audioFeatures = featuresData.audio_features;
+                        
+                        // Calculate user preferences from audio features
+                        calculateUserPreferences();
+                    }
+                }
+
+                // Fetch user's top artists
+                const topArtistsResponse = await fetch('https://api.spotify.com/v1/me/top/artists?limit=20&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topArtistsResponse.ok) {
+                    const topArtistsData = await topArtistsResponse.json();
+                    userProfile.topArtists = topArtistsData.items;
+                }
+
+                // Fetch recently played tracks
+                const recentResponse = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=50', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (recentResponse.ok) {
+                    const recentData = await recentResponse.json();
+                    userProfile.recentlyPlayed = recentData.items;
+                }
+
+                userProfile.isPersonalized = true;
+                generatePersonalizedRecommendations();
+                
+                updateStatus('✅ Music taste analyzed! Recommendations personalized.', 'active');
+                document.getElementById('musicPlatforms').textContent = 
+                    `Spotify connected with ${userProfile.topTracks.length} favorite tracks analyzed! 🎧`;
+                
+                return true;
+
+            } catch (error) {
+                console.error('Error analyzing user profile:', error);
+                updateStatus('⚠️ Using default recommendations', 'loading');
+                return false;
+            }
+        }
+
+        // Calculate user preferences from audio features
+        function calculateUserPreferences() {
+            if (!userProfile.audioFeatures || userProfile.audioFeatures.length === 0) return;
+
+            const features = userProfile.audioFeatures.filter(f => f !== null);
+            const count = features.length;
+
+            if (count === 0) return;
+
+            // Calculate average audio features from user's top tracks
+            userProfile.preferences = {
+                valence: features.reduce((sum, f) => sum + f.valence, 0) / count,
+                energy: features.reduce((sum, f) => sum + f.energy, 0) / count,
+                danceability: features.reduce((sum, f) => sum + f.danceability, 0) / count,
+                acousticness: features.reduce((sum, f) => sum + f.acousticness, 0) / count,
+                instrumentalness: features.reduce((sum, f) => sum + f.instrumentalness, 0) / count,
+                tempo: features.reduce((sum, f) => sum + f.tempo, 0) / count,
+                loudness: features.reduce((sum, f) => sum + f.loudness, 0) / count
+            };
+
+            console.log('User music preferences calculated:', userProfile.preferences);
+        }
+
+        // Generate personalized recommendations using collaborative filtering + content-based approach
+        function generatePersonalizedRecommendations() {
+            personalizedRecommendations = {};
+
+            Object.keys(MUSIC_RECOMMENDATIONS).forEach(emotion => {
+                const baseTracks = MUSIC_RECOMMENDATIONS[emotion];
+                const personalizedTracks = [];
+
+                baseTracks.forEach(track => {
+                    // Calculate similarity score based on audio features
+                    const similarity = calculateMusicSimilarity(track.features, userProfile.preferences);
+                    
+                    // Adjust match percentage based on user preferences
+                    const adjustedMatch = Math.round(
+                        (parseFloat(track.match.replace('%', '')) * 0.7 + similarity * 30)
+                    );
+
+                    personalizedTracks.push({
+                        ...track,
+                        match: `${Math.min(adjustedMatch, 99)}%`,
+                        personalizedScore: similarity,
+                        reason: getRecommendationReason(track, similarity)
+                    });
+                });
+
+                // Sort by personalized score and keep top tracks
+                personalizedTracks.sort((a, b) => b.personalizedScore - a.personalizedScore);
+                personalizedRecommendations[emotion] = personalizedTracks.slice(0, 5);
+
+                // Add user's actual tracks that match this emotion
+                addUserTracksForEmotion(emotion, personalizedRecommendations[emotion]);
+            });
+
+            console.log('Personalized recommendations generated:', personalizedRecommendations);
+        }
+
+        // Calculate similarity between track features and user preferences
+        function calculateMusicSimilarity(trackFeatures, userPreferences) {
+            if (!trackFeatures || !userPreferences) return 0.5;
+
+            // Weighted importance of different features for similarity calculation
+            const weights = {
+                valence: 0.25,      // Mood is most important
+                energy: 0.20,       // Energy level
+                danceability: 0.15, // Danceability
+                acousticness: 0.15, // Acoustic vs electronic
+                instrumentalness: 0.10, // Vocal vs instrumental
+            };
+
+            let totalSimilarity = 0;
+            let totalWeight = 0;
+
+            Object.keys(weights).forEach(feature => {
+                if (trackFeatures[feature] !== undefined && userPreferences[feature] !== undefined) {
+                    // Calculate feature similarity (1 - absolute difference)
+                    const similarity = 1 - Math.abs(trackFeatures[feature] - userPreferences[feature]);
+                    totalSimilarity += similarity * weights[feature];
+                    totalWeight += weights[feature];
+                }
+            });
+
+            return totalWeight > 0 ? totalSimilarity / totalWeight : 0.5;
+        }
+
+        // Add user's own tracks that match the emotion
+        function addUserTracksForEmotion(emotion, recommendations) {
+            if (!userProfile.topTracks || userProfile.topTracks.length === 0) return;
+
+            // Define emotion-based audio feature thresholds
+            const emotionThresholds = {
+                'happy': { valence: 0.6, energy: 0.6 },
+                'sad': { valence: 0.3, energy: 0.4 },
+                'angry': { valence: 0.4, energy: 0.7 },
+                'surprised': { valence: 0.5, energy: 0.6 },
+                'fearful': { valence: 0.4, energy: 0.5 },
+                'disgusted': { valence: 0.4, energy: 0.5 },
+                'neutral': { valence: 0.4, energy: 0.4 }
+            };
+
+            const threshold = emotionThresholds[emotion];
+            if (!threshold) return;
+
+            // Find user tracks that match this emotion
+            userProfile.topTracks.forEach((track, index) => {
+                const features = userProfile.audioFeatures[index];
+                if (!features) return;
+
+                const matchesEmotion = 
+                    (emotion === 'happy' && features.valence >= threshold.valence && features.energy >= threshold.energy) ||
+                    (emotion === 'sad' && features.valence <= threshold.valence && features.energy <= threshold.energy) ||
+                    (emotion === 'angry' && features.energy >= threshold.energy) ||
+                    (emotion === 'neutral' && features.valence >= 0.3 && features.valence <= 0.7);
+
+                if (matchesEmotion && recommendations.length < 7) {
+                    recommendations.push({
+                        name: track.name,
+                        artist: track.artists.map(a => a.name).join(', '),
+                        uri: track.uri,
+                        youtubeId: null, // We don't have YouTube IDs for user tracks
+                        match: '💎 Your Music',
+                        personalizedScore: 1.0,
+                        reason: 'From your top tracks',
+                        isUserTrack: true
+                    });
+                }
+            });
+        }
+
+        // Get recommendation reason
+        function getRecommendationReason(track, similarity) {
+            if (similarity > 0.8) return 'Perfect match for your taste';
+            if (similarity > 0.6) return 'Great match based on your preferences';
+            if (similarity > 0.4) return 'Good fit for your music style';
+            return 'Recommended for this mood';
+        }
+
+        // Enhanced music recommendations with personalization
+        function updateMusicRecommendations(emotion) {
+            const tracks = userProfile.isPersonalized && personalizedRecommendations[emotion] 
+                ? personalizedRecommendations[emotion] 
+                : MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
+            
+            const recsList = document.getElementById('recommendationsList');
+            recsList.innerHTML = '';
+            
+            tracks.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'recommendation-item';
+                item.onclick = () => playTrack(track);
+                
+                // Special styling for user's own tracks
+                const artworkContent = track.isUserTrack 
+                    ? '💎' 
+                    : (currentPlatform === 'spotify' ? '🎧' : '📺');
+                
+                const matchColor = track.isUserTrack 
+                    ? '#e8f5e8' 
+                    : track.personalizedScore > 0.7 
+                        ? '#e8f5e8' 
+                        : '#f0f8ff';
+
+                item.innerHTML = `
+                    <div class="track-artwork">${artworkContent}</div>
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artist}</div>
+                        ${track.reason ? `<div style="font-size: 0.7em; color: #888; margin-top: 2px;">${track.reason}</div>` : ''}
+                    </div>
+                    <div class="mood-match" style="background: ${matchColor};">${track.match}</div>
+                `;
+                
+                recsList.appendChild(item);
+            });
+
+            // Show personalization status
+            if (userProfile.isPersonalized) {
+                const personalizedNote = document.createElement('div');
+                personalizedNote.style.cssText = 'text-align: center; color: #666; font-size: 0.8em; margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 6px;';
+                personalizedNote.textContent = '✨ Recommendations personalized based on your Spotify listening history';
+                recsList.appendChild(personalizedNote);
+            }
+        }TQ", match: "85%" },
                 { name: "Somebody That I Used to Know", artist: "Gotye", uri: "spotify:track:2JzZzZUQj3Qff7wapcbKjc", youtubeId: "8UVNT4wvIGY", match: "83%" },
                 { name: "Radioactive", artist: "Imagine Dragons", uri: "spotify:track:4RCZjm5OROoqN7CQ8S9e1F", youtubeId: "ktvTqknDobU", match: "81%" },
                 { name: "Feel It Still", artist: "Portugal. The Man", uri: "spotify:track:1OKmhQBtDgKvwNMQeXUsBa", youtubeId: "pBkHHoOIIn8", match: "79%" }
@@ -891,7 +1192,7 @@ To fix the "Invalid redirect URI" error:
             document.getElementById('musicPlatforms').textContent = 'Spotify setup required - add redirect URI to your app settings';
         }
 
-        // Handle Spotify callback
+        // Enhanced Spotify connection with personalization
         async function handleSpotifyCallback(code) {
             try {
                 const codeVerifier = localStorage.getItem('code_verifier');
@@ -925,12 +1226,126 @@ To fix the "Invalid redirect URI" error:
 
                 await initializeSpotifyPlayer();
                 updateConnectButton('spotify', true);
-                document.getElementById('musicPlatforms').textContent = 'Spotify Premium connected successfully! 🎧';
+
+                // Analyze user profile for personalization
+                await analyzeUserProfile();
 
             } catch (error) {
                 console.error('Spotify callback error:', error);
                 updateStatus('❌ Error authenticating with Spotify', 'error');
             }
+        }
+
+        // Add personalization button to UI
+        function addPersonalizationControls() {
+            if (!accessToken) return;
+
+            const recommendationsPanel = document.querySelector('.recommendations-panel');
+            const personalizationBtn = document.createElement('button');
+            personalizationBtn.className = 'control-btn';
+            personalizationBtn.style.cssText = 'width: 100%; margin: 10px 0; background: linear-gradient(45deg, #1db954, #1ed760);';
+            personalizationBtn.innerHTML = '🎯 Personalize Recommendations';
+            personalizationBtn.onclick = analyzeUserProfile;
+
+            // Insert after connect section
+            const connectSection = document.querySelector('.connect-section');
+            connectSection.parentNode.insertBefore(personalizationBtn, connectSection.nextSibling);
+        }
+
+        // Enhanced emotion-based learning
+        function updateEmotionHistory(emotion, confidence) {
+            if (!userProfile.emotionHistory[emotion]) {
+                userProfile.emotionHistory[emotion] = [];
+            }
+
+            userProfile.emotionHistory[emotion].push({
+                timestamp: Date.now(),
+                confidence: confidence,
+                context: {
+                    timeOfDay: new Date().getHours(),
+                    dayOfWeek: new Date().getDay()
+                }
+            });
+
+            // Keep only recent history (last 100 entries per emotion)
+            if (userProfile.emotionHistory[emotion].length > 100) {
+                userProfile.emotionHistory[emotion] = userProfile.emotionHistory[emotion].slice(-100);
+            }
+
+            // Update personalized recommendations based on emotion patterns
+            if (userProfile.isPersonalized) {
+                adaptRecommendationsToEmotionHistory();
+            }
+        }
+
+        // Adapt recommendations based on emotion history
+        function adaptRecommendationsToEmotionHistory() {
+            Object.keys(personalizedRecommendations).forEach(emotion => {
+                if (userProfile.emotionHistory[emotion] && userProfile.emotionHistory[emotion].length > 5) {
+                    const history = userProfile.emotionHistory[emotion];
+                    const avgConfidence = history.reduce((sum, entry) => sum + entry.confidence, 0) / history.length;
+                    
+                    // Boost recommendations for emotions user frequently experiences
+                    personalizedRecommendations[emotion].forEach(track => {
+                        if (!track.isUserTrack) {
+                            const boost = Math.min(avgConfidence * 0.1, 0.05); // Max 5% boost
+                            track.personalizedScore = Math.min(track.personalizedScore + boost, 1.0);
+                            
+                            const currentMatch = parseFloat(track.match.replace('%', ''));
+                            track.match = `${Math.min(Math.round(currentMatch + boost * 100), 99)}%`;
+                        }
+                    });
+
+                    // Re-sort by updated scores
+                    personalizedRecommendations[emotion].sort((a, b) => b.personalizedScore - a.personalizedScore);
+                }
+            });
+        }
+
+        // Enhanced mood insights with personalization
+        function updateMoodInsights(emotion) {
+            const insights = getMoodInsights(emotion);
+            document.getElementById('emotionPattern').textContent = insights.pattern;
+            document.getElementById('moodRecommendation').textContent = insights.recommendation;
+
+            // Add personalized insights if available
+            if (userProfile.isPersonalized) {
+                const personalizedInsight = getPersonalizedInsight(emotion);
+                document.getElementById('musicPlatforms').textContent = personalizedInsight;
+            }
+        }
+
+        // Get personalized insights
+        function getPersonalizedInsight(emotion) {
+            if (!userProfile.topArtists || userProfile.topArtists.length === 0) {
+                return 'Analyzing your music taste...';
+            }
+
+            const topGenres = extractTopGenres();
+            const emotionCount = userProfile.emotionHistory[emotion]?.length || 0;
+
+            if (emotionCount > 10) {
+                return `You frequently feel ${emotion}. Your top genres: ${topGenres.slice(0, 2).join(', ')}. Recommendations tailored to your taste! 🎵`;
+            } else {
+                return `Based on your preference for ${topGenres[0]}, we've personalized your ${emotion} recommendations. 🎧`;
+            }
+        }
+
+        // Extract top genres from user's artists
+        function extractTopGenres() {
+            if (!userProfile.topArtists) return ['pop', 'rock'];
+
+            const genreCount = {};
+            userProfile.topArtists.forEach(artist => {
+                artist.genres.forEach(genre => {
+                    genreCount[genre] = (genreCount[genre] || 0) + 1;
+                });
+            });
+
+            return Object.entries(genreCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([genre]) => genre);
         }
 
         // Initialize Spotify Player
@@ -1461,15 +1876,59 @@ To fix the "Invalid redirect URI" error:
             status.innerHTML = `${spinner}<span>${message}</span>`;
         }
 
-        // Initialize on load
+        // Enhanced emotion display with learning
+        function updateEmotionDisplay(emotions) {
+            let dominantEmotion = '';
+            let maxConfidence = 0;
+            
+            Object.entries(emotions).forEach(([emotion, confidence]) => {
+                const card = document.getElementById(`${emotion}-card`);
+                const confidenceEl = document.getElementById(`${emotion}-confidence`);
+                const barEl = document.getElementById(`${emotion}-bar`);
+                
+                if (card && confidenceEl && barEl) {
+                    confidenceEl.textContent = `${(confidence * 100).toFixed(1)}%`;
+                    barEl.style.width = `${confidence * 100}%`;
+                    card.classList.remove('dominant');
+                    
+                    if (confidence > maxConfidence) {
+                        maxConfidence = confidence;
+                        dominantEmotion = emotion;
+                    }
+                }
+            });
+            
+            if (dominantEmotion) {
+                const dominantCard = document.getElementById(`${dominantEmotion}-card`);
+                if (dominantCard) {
+                    dominantCard.classList.add('dominant');
+                }
+                
+                currentEmotion = dominantEmotion;
+                updateCurrentMoodDisplay(dominantEmotion, maxConfidence);
+                updateMusicRecommendations(dominantEmotion);
+                updateMoodInsights(dominantEmotion);
+
+                // Update emotion history for learning
+                updateEmotionHistory(dominantEmotion, maxConfidence);
+            }
+        }
+
+        // Initialize on load with personalization
         window.addEventListener('load', async () => {
-            console.log('Initializing MoodSync...');
+            console.log('Initializing MoodSync with Personalization...');
             
             const savedToken = localStorage.getItem('spotify_access_token');
             if (savedToken) {
                 accessToken = savedToken;
                 await initializeSpotifyPlayer();
                 updateConnectButton('spotify', true);
+                
+                // Auto-analyze user profile if token exists
+                setTimeout(async () => {
+                    await analyzeUserProfile();
+                    addPersonalizationControls();
+                }, 2000);
             }
 
             if (!youtubeAPIReady && window.YT) {
@@ -1479,9 +1938,9 @@ To fix the "Invalid redirect URI" error:
             await initializeApp();
             
             document.getElementById('moodRecommendation').textContent = 'Start emotion detection to get AI-powered music recommendations!';
-            document.getElementById('musicPlatforms').textContent = 'Connect Spotify Premium or YouTube Music for real streaming';
+            document.getElementById('musicPlatforms').textContent = 'Connect Spotify for personalized recommendations based on your listening history';
             
-            console.log('MoodSync ready!');
+            console.log('MoodSync ready with ML personalization!');
         });
         
         // Cleanup on unload
