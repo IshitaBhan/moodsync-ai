@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodSync - Real AI Music Recommendation System</title>
+    <title>MoodSync - AI Music Recommendation System</title>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         * {
             margin: 0;
@@ -40,7 +42,7 @@
         }
 
         .ml-badge {
-            background: linear-gradient(45deg, #1db954, #1ed760);
+            background: linear-gradient(45deg, #1db954, #ff0000);
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -235,6 +237,45 @@
             border-color: #ff0000;
         }
 
+        .connect-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .connect-btn {
+            flex: 1;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .spotify-connect {
+            background: #1db954;
+            color: white;
+        }
+
+        .spotify-connect:hover {
+            background: #1ed760;
+        }
+
+        .youtube-connect {
+            background: #ff0000;
+            color: white;
+        }
+
+        .youtube-connect:hover {
+            background: #cc0000;
+        }
+
+        .connect-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .recommendation-item {
             background: white;
             padding: 12px;
@@ -263,6 +304,13 @@
             color: white;
             font-weight: bold;
             flex-shrink: 0;
+        }
+
+        .track-artwork img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
         }
 
         .track-info {
@@ -298,26 +346,19 @@
             flex-shrink: 0;
         }
 
-        .spotify-connect {
+        .play-button {
             background: #1db954;
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
             cursor: pointer;
-            width: 100%;
-            margin-bottom: 15px;
-            transition: background 0.3s;
+            margin-left: 8px;
         }
 
-        .spotify-connect:hover {
-            background: #1ed760;
-        }
-
-        .spotify-connect:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+        .youtube-play {
+            background: #ff0000;
         }
 
         .detection-stats {
@@ -388,6 +429,98 @@
             100% { transform: rotate(360deg); }
         }
 
+        .player-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .player-controls.active {
+            display: block;
+        }
+
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .track-cover {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background: #f0f0f0;
+        }
+
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .playback-btn {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .youtube-controls .playback-btn {
+            background: #ff0000;
+        }
+
+        /* YouTube Player Styles */
+        .youtube-player-container {
+            position: relative;
+            margin-top: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .youtube-player-container.active {
+            display: block;
+        }
+
+        .youtube-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 10px;
+        }
+
+        .youtube-overlay.hidden {
+            display: none;
+        }
+
+        .yt-info {
+            text-align: center;
+            color: white;
+        }
+
+        .yt-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .yt-artist {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
         @media (max-width: 1200px) {
             .main-grid {
                 grid-template-columns: 1fr 1fr;
@@ -398,6 +531,10 @@
             .main-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .connect-section {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -405,8 +542,8 @@
     <div class="container">
         <div class="header">
             <h1>MoodSync</h1>
-            <div class="ml-badge">🎵 Real FaceAPI.js Emotion Recognition + Music AI</div>
-            <p>Professional-grade emotion detection using pre-trained models with personalized music recommendations</p>
+            <div class="ml-badge">🎵 FaceAPI.js + Spotify + YouTube Music Integration</div>
+            <p>Professional emotion detection with real music streaming from multiple platforms</p>
         </div>
 
         <div class="main-grid">
@@ -463,11 +600,16 @@
 
             <!-- Music Recommendations -->
             <div class="recommendations-panel">
-                <h3>🎵 Personalized Recommendations</h3>
+                <h3>🎵 Music Streaming</h3>
                 
-                <button id="spotifyConnect" class="spotify-connect" onclick="connectSpotify()">
-                    🎧 Connect Spotify Account
-                </button>
+                <div class="connect-section">
+                    <button id="spotifyConnect" class="connect-btn spotify-connect" onclick="connectSpotify()">
+                        🎧 Spotify Premium
+                    </button>
+                    <button id="youtubeConnect" class="connect-btn youtube-connect" onclick="connectYouTube()">
+                        📺 YouTube Music
+                    </button>
+                </div>
                 
                 <div class="platform-tabs">
                     <div class="platform-tab active" data-platform="spotify" onclick="switchPlatform('spotify')">
@@ -483,6 +625,49 @@
                         Start emotion detection to get personalized music recommendations
                     </div>
                 </div>
+
+                <!-- Spotify Player Controls -->
+                <div id="spotifyPlayerControls" class="player-controls">
+                    <div class="now-playing">
+                        <img id="trackCover" class="track-cover" src="">
+                        <div>
+                            <div id="trackName" style="font-weight: 600; font-size: 0.9em;"></div>
+                            <div id="trackArtist" style="color: #666; font-size: 0.8em;"></div>
+                        </div>
+                    </div>
+                    <div class="playback-controls">
+                        <button class="playback-btn" onclick="previousTrack()">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="togglePlayback()" id="playPauseBtn">▶️ Play</button>
+                        <button class="playback-btn" onclick="nextTrack()">⏭️ Next</button>
+                    </div>
+                </div>
+
+                <!-- YouTube Player -->
+                <div id="youtubePlayerContainer" class="youtube-player-container">
+                    <div id="youtubePlayer"></div>
+                    <div id="youtubeOverlay" class="youtube-overlay">
+                        <div class="yt-info">
+                            <div class="yt-title" id="ytTitle">Select a song to play</div>
+                            <div class="yt-artist" id="ytArtist">YouTube Music Player</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YouTube Controls -->
+                <div id="youtubePlayerControls" class="player-controls youtube-controls">
+                    <div class="now-playing">
+                        <div class="track-cover" style="background: #ff0000; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">▶️</div>
+                        <div>
+                            <div id="ytCurrentTitle" style="font-weight: 600; font-size: 0.9em;">No track selected</div>
+                            <div id="ytCurrentArtist" style="color: #666; font-size: 0.8em;">YouTube Music</div>
+                        </div>
+                    </div>
+                    <div class="playback-controls">
+                        <button class="playback-btn" onclick="ytPreviousTrack()">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="ytTogglePlayback()" id="ytPlayPauseBtn">▶️ Play</button>
+                        <button class="playback-btn" onclick="ytNextTrack()">⏭️ Next</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -495,8 +680,8 @@
                     <div id="emotionPattern">Analyzing your mood patterns...</div>
                 </div>
                 <div class="insight-card">
-                    <div class="insight-title">🎵 Music Personality</div>
-                    <div id="musicPersonality">Start analysis to understand your music taste</div>
+                    <div class="insight-title">🎵 Music Platforms</div>
+                    <div id="musicPlatforms">Connect Spotify Premium or YouTube Music for streaming</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-title">💡 Mood Recommendation</div>
@@ -504,7 +689,7 @@
                 </div>
                 <div class="insight-card">
                     <div class="insight-title">📈 Real-time Analysis</div>
-                    <div id="moodTracking">Using pre-trained FaceAPI.js emotion models</div>
+                    <div id="moodTracking">Using FaceAPI.js + Spotify Web Playback SDK + YouTube IFrame API</div>
                 </div>
             </div>
         </div>
@@ -518,6 +703,38 @@
         let lastTime = performance.now();
         let currentEmotion = 'neutral';
         let currentPlatform = 'spotify';
+        let spotifyPlayer = null;
+        let spotifyDeviceId = null;
+        let accessToken = null;
+        let youtubePlayer = null;
+        let youtubeConnected = false;
+        let currentPlaylist = [];
+        let currentTrackIndex = 0;
+
+        // Generate random state for security
+        function generateRandomString(length) {
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let text = '';
+            for (let i = 0; i < length; i++) {
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return text;
+        }
+
+        // Calculate SHA256 for PKCE
+        async function sha256(plain) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plain);
+            return window.crypto.subtle.digest('SHA-256', data);
+        }
+
+        // Base64 encode for PKCE
+        function base64encode(input) {
+            return btoa(String.fromCharCode(...new Uint8Array(input)))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
+        }
 
         // FaceAPI.js emotion mapping
         const EMOTION_CONFIG = {
@@ -530,424 +747,627 @@
             'surprised': { emoji: '😲', color: '#e67e22' }
         };
 
-        // Music recommendations database by mood
+        // Enhanced music recommendations with real URIs and YouTube video IDs
         const MUSIC_RECOMMENDATIONS = {
-            'happy': {
-                spotify: [
-                    { name: "Good 4 U", artist: "Olivia Rodrigo", match: "95%" },
-                    { name: "Blinding Lights", artist: "The Weeknd", match: "92%" },
-                    { name: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", match: "90%" },
-                    { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", match: "88%" },
-                    { name: "Happy", artist: "Pharrell Williams", match: "95%" }
-                ],
-                youtube: [
-                    { name: "Happy Songs Playlist", artist: "Various Artists", match: "94%" },
-                    { name: "Feel Good Pop Hits", artist: "Pop Music", match: "91%" },
-                    { name: "Upbeat Workout Music", artist: "Fitness Music", match: "87%" },
-                    { name: "Dancing in the Kitchen", artist: "Indie Pop", match: "89%" }
-                ]
-            },
-            'sad': {
-                spotify: [
-                    { name: "Someone Like You", artist: "Adele", match: "93%" },
-                    { name: "The Night We Met", artist: "Lord Huron", match: "91%" },
-                    { name: "Hurt", artist: "Johnny Cash", match: "89%" },
-                    { name: "Mad World", artist: "Gary Jules", match: "87%" },
-                    { name: "Tears in Heaven", artist: "Eric Clapton", match: "85%" }
-                ],
-                youtube: [
-                    { name: "Sad Songs for Rainy Days", artist: "Melancholic Mix", match: "92%" },
-                    { name: "Emotional Piano Music", artist: "Classical", match: "89%" },
-                    { name: "Heartbreak Ballads", artist: "Various", match: "86%" },
-                    { name: "Lo-Fi Sad Beats", artist: "Chill Hop", match: "84%" }
-                ]
-            },
-            'angry': {
-                spotify: [
-                    { name: "Break Stuff", artist: "Limp Bizkit", match: "94%" },
-                    { name: "Bodies", artist: "Drowning Pool", match: "92%" },
-                    { name: "Killing in the Name", artist: "Rage Against the Machine", match: "90%" },
-                    { name: "Chop Suey!", artist: "System of a Down", match: "88%" },
-                    { name: "Given Up", artist: "Linkin Park", match: "86%" }
-                ],
-                youtube: [
-                    { name: "Aggressive Rock/Metal", artist: "Heavy Music", match: "93%" },
-                    { name: "Workout Pump Up", artist: "High Energy", match: "89%" },
-                    { name: "Angry Rap Playlist", artist: "Hip Hop", match: "87%" },
-                    { name: "Punk Rock Essentials", artist: "Punk", match: "85%" }
-                ]
-            },
-            'surprised': {
-                spotify: [
-                    { name: "Electric Feel", artist: "MGMT", match: "88%" },
-                    { name: "Pumped Up Kicks", artist: "Foster the People", match: "85%" },
-                    { name: "Somebody That I Used to Know", artist: "Gotye", match: "83%" },
-                    { name: "Radioactive", artist: "Imagine Dragons", match: "81%" },
-                    { name: "Feel It Still", artist: "Portugal. The Man", match: "79%" }
-                ],
-                youtube: [
-                    { name: "Mind-Blowing Music", artist: "Experimental", match: "87%" },
-                    { name: "Psychedelic Rock", artist: "Trippy Sounds", match: "84%" },
-                    { name: "Electronic Surprises", artist: "EDM", match: "82%" },
-                    { name: "Weird Al Yankovic", artist: "Comedy", match: "80%" }
-                ]
-            },
-            'fearful': {
-                spotify: [
-                    { name: "Breathe Me", artist: "Sia", match: "89%" },
-                    { name: "Heavy", artist: "Linkin Park ft. Kiiara", match: "87%" },
-                    { name: "Anxiety", artist: "Julia Michaels", match: "85%" },
-                    { name: "Stressed Out", artist: "Twenty One Pilots", match: "83%" },
-                    { name: "Vulnerable", artist: "Selena Gomez", match: "81%" }
-                ],
-                youtube: [
-                    { name: "Calming Nature Sounds", artist: "Relaxation", match: "91%" },
-                    { name: "Anxiety Relief Music", artist: "Therapy", match: "88%" },
-                    { name: "Meditation & Mindfulness", artist: "Wellness", match: "86%" },
-                    { name: "Soft Acoustic Guitar", artist: "Peaceful", match: "84%" }
-                ]
-            },
-            'disgusted': {
-                spotify: [
-                    { name: "Bad Guy", artist: "Billie Eilish", match: "86%" },
-                    { name: "Sick Boy", artist: "The Chainsmokers", match: "84%" },
-                    { name: "Bury a Friend", artist: "Billie Eilish", match: "82%" },
-                    { name: "Bad Things", artist: "Machine Gun Kelly", match: "80%" },
-                    { name: "Disease", artist: "Beartooth", match: "78%" }
-                ],
-                youtube: [
-                    { name: "Dark Electronic Music", artist: "Industrial", match: "85%" },
-                    { name: "Grunge Rock Classics", artist: "Alternative", match: "83%" },
-                    { name: "Disturbed Music Mix", artist: "Metal", match: "81%" },
-                    { name: "Gothic Darkwave", artist: "Dark Music", match: "79%" }
-                ]
-            },
-            'neutral': {
-                spotify: [
-                    { name: "Chill Hits", artist: "Various Artists", match: "85%" },
-                    { name: "Lo-Fi Hip Hop", artist: "Study Beats", match: "83%" },
-                    { name: "Indie Folk Mix", artist: "Alternative", match: "81%" },
-                    { name: "Coffee Shop Vibes", artist: "Acoustic", match: "79%" },
-                    { name: "Background Music", artist: "Ambient", match: "77%" }
-                ],
-                youtube: [
-                    { name: "Study Music Playlist", artist: "Focus Music", match: "84%" },
-                    { name: "Chill Hop Radio", artist: "Lo-Fi", match: "82%" },
-                    { name: "Ambient Background", artist: "Atmospheric", match: "80%" },
-                    { name: "Coffee Shop Jazz", artist: "Jazz", match: "78%" }
-                ]
-            }
+            'happy': [
+                { 
+                    name: "Good 4 U", 
+                    artist: "Olivia Rodrigo", 
+                    uri: "spotify:track:4ZtFanR9U6ndgddUvNcjcG", 
+                    youtubeId: "gNi_6U5Pm_o",
+                    match: "95%" 
+                },
+                { 
+                    name: "Blinding Lights", 
+                    artist: "The Weeknd", 
+                    uri: "spotify:track:0VjIjW4GlUK7tuDqZgJ6Ny", 
+                    youtubeId: "4NRXx6U8ABQ",
+                    match: "92%" 
+                },
+                { 
+                    name: "Uptown Funk", 
+                    artist: "Mark Ronson ft. Bruno Mars", 
+                    uri: "spotify:track:32OlwWuMpZ6b0aN2RZOeMS", 
+                    youtubeId: "OPf0YbXqDm0",
+                    match: "90%" 
+                },
+                { 
+                    name: "Can't Stop the Feeling!", 
+                    artist: "Justin Timberlake", 
+                    uri: "spotify:track:6JV5LYLY4k8bvr7Lxyq64Z", 
+                    youtubeId: "ru0K8uYEZWw",
+                    match: "88%" 
+                },
+                { 
+                    name: "Happy", 
+                    artist: "Pharrell Williams", 
+                    uri: "spotify:track:60nZcImufyMA1MKQY3dcCH", 
+                    youtubeId: "ZbZSe6N_BXs",
+                    match: "95%" 
+                }
+            ],
+            'sad': [
+                { 
+                    name: "Someone Like You", 
+                    artist: "Adele", 
+                    uri: "spotify:track:1zwMYTA5nlNjZxYrvBB2pV", 
+                    youtubeId: "hLQl3WQQoQ0",
+                    match: "93%" 
+                },
+                { 
+                    name: "The Night We Met", 
+                    artist: "Lord Huron", 
+                    uri: "spotify:track:0ct6r3EGTcMLPtrXHDvVjc", 
+                    youtubeId: "KtlgYxa6BMU",
+                    match: "91%" 
+                },
+                { 
+                    name: "Hurt", 
+                    artist: "Johnny Cash", 
+                    uri: "spotify:track:4gMgiXfqyzZLMhsksGmbQV", 
+                    youtubeId: "8AHCfZTRGiI",
+                    match: "89%" 
+                },
+                { 
+                    name: "Mad World", 
+                    artist: "Gary Jules", 
+                    uri: "spotify:track:3JOVTQ5h8HGFnDdp4VT3MP", 
+                    youtubeId: "4N3N1MlvVc4",
+                    match: "87%" 
+                },
+                { 
+                    name: "Tears in Heaven", 
+                    artist: "Eric Clapton", 
+                    uri: "spotify:track:6v3KW9xbzN5yKLt9YKDYA2", 
+                    youtubeId: "JxPj3GAYYZ0",
+                    match: "85%" 
+                }
+            ],
+            'angry': [
+                { 
+                    name: "Break Stuff", 
+                    artist: "Limp Bizkit", 
+                    uri: "spotify:track:6OmhkSOpvYBokMKQxpIGx2", 
+                    youtubeId: "ZpUYjpKg9KY",
+                    match: "94%" 
+                },
+                { 
+                    name: "Bodies", 
+                    artist: "Drowning Pool", 
+                    uri: "spotify:track:51pQ7vY7WXzxskwloaeqyj", 
+                    youtubeId: "04F4xlWSFh0",
+                    match: "92%" 
+                },
+                { 
+                    name: "Killing in the Name", 
+                    artist: "Rage Against the Machine", 
+                    uri: "spotify:track:59WN2psjkt1tyaxjspN8fp", 
+                    youtubeId: "bWXazVhlyxQ",
+                    match: "90%" 
+                },
+                { 
+                    name: "Chop Suey!", 
+                    artist: "System of a Down", 
+                    uri: "spotify:track:50rrZ5K7HlBr2FaZtGWflD", 
+                    youtubeId: "CSvFpBOe8eY",
+                    match: "88%" 
+                },
+                { 
+                    name: "Given Up", 
+                    artist: "Linkin Park", 
+                    uri: "spotify:track:5a1iz510sv2W9Dt1MvFd5R", 
+                    youtubeId: "0xyxtzD54rM",
+                    match: "86%" 
+                }
+            ],
+            'surprised': [
+                { 
+                    name: "Electric Feel", 
+                    artist: "MGMT", 
+                    uri: "spotify:track:3FtYBEfBqAlGO46NUDQSAt", 
+                    youtubeId: "MmZexg8sxyk",
+                    match: "88%" 
+                },
+                { 
+                    name: "Pumped Up Kicks", 
+                    artist: "Foster the People", 
+                    uri: "spotify:track:7w87IxuO7BDcJ3YUqCyMTT", 
+                    youtubeId: "SDTZ7iX4vTQ",
+                    match: "85%" 
+                },
+                { 
+                    name: "Somebody That I Used to Know", 
+                    artist: "Gotye", 
+                    uri: "spotify:track:2JzZzZUQj3Qff7wapcbKjc", 
+                    youtubeId: "8UVNT4wvIGY",
+                    match: "83%" 
+                },
+                { 
+                    name: "Radioactive", 
+                    artist: "Imagine Dragons", 
+                    uri: "spotify:track:4RCZjm5OROoqN7CQ8S9e1F", 
+                    youtubeId: "ktvTqknDobU",
+                    match: "81%" 
+                },
+                { 
+                    name: "Feel It Still", 
+                    artist: "Portugal. The Man", 
+                    uri: "spotify:track:1OKmhQBtDgKvwNMQeXUsBa", 
+                    youtubeId: "pBkHHoOIIn8",
+                    match: "79%" 
+                }
+            ],
+            'fearful': [
+                { 
+                    name: "Breathe Me", 
+                    artist: "Sia", 
+                    uri: "spotify:track:7K4PG6Xgf4ZRzHTYiWTRNI", 
+                    youtubeId: "ghPcYqn0p4Y",
+                    match: "89%" 
+                },
+                { 
+                    name: "Heavy", 
+                    artist: "Linkin Park ft. Kiiara", 
+                    uri: "spotify:track:50JJSqHUf2RQ9xsHs0KMHg", 
+                    youtubeId: "5dmQ3QWpy1Q",
+                    match: "87%" 
+                },
+                { 
+                    name: "Anxiety", 
+                    artist: "Julia Michaels", 
+                    uri: "spotify:track:1A5S3fzxxNJ34cXLBXdN8E", 
+                    youtubeId: "IA8078QRBdg",
+                    match: "85%" 
+                },
+                { 
+                    name: "Stressed Out", 
+                    artist: "Twenty One Pilots", 
+                    uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", 
+                    youtubeId: "pXRviuL6vMY",
+                    match: "83%" 
+                },
+                { 
+                    name: "Vulnerable", 
+                    artist: "Selena Gomez", 
+                    uri: "spotify:track:6Ic3gB2WgEK8IxFZb7e0AK", 
+                    youtubeId: "x3bfa3DZ8JM",
+                    match: "81%" 
+                }
+            ],
+            'disgusted': [
+                { 
+                    name: "Bad Guy", 
+                    artist: "Billie Eilish", 
+                    uri: "spotify:track:2Fxmhks0bxGSBdJ92vM42m", 
+                    youtubeId: "DyDfgMOUjCI",
+                    match: "86%" 
+                },
+                { 
+                    name: "Sick Boy", 
+                    artist: "The Chainsmokers", 
+                    uri: "spotify:track:3b2cBRWXXNp9PTDqsEtQPa", 
+                    youtubeId: "lEi_XBg2Fpk",
+                    match: "84%" 
+                },
+                { 
+                    name: "Bury a Friend", 
+                    artist: "Billie Eilish", 
+                    uri: "spotify:track:1CsMKhwEmNnmvEeKWLwdWn", 
+                    youtubeId: "HUHC9tYz8ik",
+                    match: "82%" 
+                },
+                { 
+                    name: "Bad Things", 
+                    artist: "Machine Gun Kelly", 
+                    uri: "spotify:track:6or1bKJiZ06IlK0vFvY75k", 
+                    youtubeId: "2X_2IdybTV0",
+                    match: "80%" 
+                },
+                { 
+                    name: "Disease", 
+                    artist: "Beartooth", 
+                    uri: "spotify:track:1brw1QZS6WKE8NhwelLr2J", 
+                    youtubeId: "lbYIUnV8u7E",
+                    match: "78%" 
+                }
+            ],
+            'neutral': [
+                { 
+                    name: "Weightless", 
+                    artist: "Marconi Union", 
+                    uri: "spotify:track:7KC5YnBGkmBWNdlcbLQh0z", 
+                    youtubeId: "UfcAVejslrU",
+                    match: "85%" 
+                },
+                { 
+                    name: "Clair de Lune", 
+                    artist: "Claude Debussy", 
+                    uri: "spotify:track:1vyhJKp5tQnB5K5aaNH1oM", 
+                    youtubeId: "CvFH_6DNRCY",
+                    match: "83%" 
+                },
+                { 
+                    name: "River", 
+                    artist: "Leon Bridges", 
+                    uri: "spotify:track:5Ks4g4HteObeZOiL0Ree4J", 
+                    youtubeId: "0Hegd4xNfRo",
+                    match: "81%" 
+                },
+                { 
+                    name: "Holocene", 
+                    artist: "Bon Iver", 
+                    uri: "spotify:track:2takcwOaAZWiXQijPHIx7B", 
+                    youtubeId: "TWcyIpul8OE",
+                    match: "79%" 
+                },
+                { 
+                    name: "Intro", 
+                    artist: "The xx", 
+                    uri: "spotify:track:3WdnHTUgFI4G5SjNEAZlOo", 
+                    youtubeId: "_VPKfacgXao",
+                    match: "77%" 
+                }
+            ]
         };
 
-        // Initialize the application
-        async function initializeApp() {
+        // Initialize Spotify Web Playback SDK
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            console.log('Spotify Web Playback SDK Ready');
+        };
+
+        // YouTube API Ready
+        let youtubeAPIReady = false;
+        function onYouTubeIframeAPIReady() {
+            console.log('YouTube IFrame API Ready');
+            youtubeAPIReady = true;
+            createYouTubePlayer();
+        }
+
+        // Create YouTube Player
+        function createYouTubePlayer() {
+            youtubePlayer = new YT.Player('youtubePlayer', {
+                height: '300',
+                width: '100%',
+                videoId: '',
+                playerVars: {
+                    autoplay: 0,
+                    controls: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    showinfo: 0
+                },
+                events: {
+                    onReady: onYouTubePlayerReady,
+                    onStateChange: onYouTubePlayerStateChange
+                }
+            });
+        }
+
+        function onYouTubePlayerReady(event) {
+            console.log('YouTube Player Ready');
+        }
+
+        function onYouTubePlayerStateChange(event) {
+            const playBtn = document.getElementById('ytPlayPauseBtn');
+            if (event.data === YT.PlayerState.PLAYING) {
+                playBtn.textContent = '⏸️ Pause';
+                document.getElementById('youtubeOverlay').classList.add('hidden');
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                playBtn.textContent = '▶️ Play';
+            } else if (event.data === YT.PlayerState.ENDED) {
+                ytNextTrack();
+            }
+        }
+
+        // Connect to Spotify with PKCE flow
+        async function connectSpotify() {
             try {
-                console.log('Loading FaceAPI.js models...');
-                updateStatus('Loading pre-trained emotion recognition models...', 'loading');
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
                 
-                // Load FaceAPI.js models from CDN
-                const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+                if (code) {
+                    await handleSpotifyCallback(code);
+                    return;
+                }
+
+                const codeVerifier = generateRandomString(128);
+                localStorage.setItem('code_verifier', codeVerifier);
+                
+                const hashed = await sha256(codeVerifier);
+                const codeChallenge = base64encode(hashed);
+                
+                const state = generateRandomString(16);
+                localStorage.setItem('spotify_auth_state', state);
+
+                const args = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: 'e642820d6fd04ac699ad222cb2e9ad08',
+                    scope: 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-modify-public playlist-modify-private',
+                    redirect_uri: window.location.origin + window.location.pathname,
+                    state: state,
+                    code_challenge_method: 'S256',
+                    code_challenge: codeChallenge,
+                });
+
+                window.location.href = 'https://accounts.spotify.com/authorize?' + args.toString();
+                
+            } catch (error) {
+                console.error('Spotify connection error:', error);
+                updateStatus('error', 'Error connecting to Spotify. Please try again.');
+            }
+        }
+
+        // Handle Spotify OAuth callback
+        async function handleSpotifyCallback(code) {
+            try {
+                const codeVerifier = localStorage.getItem('code_verifier');
+                
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        client_id: 'e642820d6fd04ac699ad222cb2e9ad08',
+                        grant_type: 'authorization_code',
+                        code: code,
+                        redirect_uri: window.location.origin + window.location.pathname,
+                        code_verifier: codeVerifier,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                accessToken = data.access_token;
+
+                localStorage.setItem('spotify_access_token', accessToken);
+                localStorage.removeItem('code_verifier');
+                localStorage.removeItem('spotify_auth_state');
+
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                await initializeSpotifyPlayer();
+                updateConnectButton('spotify', true);
+                updateInsights('musicPlatforms', 'Spotify Premium connected successfully! 🎧');
+
+            } catch (error) {
+                console.error('Spotify callback error:', error);
+                updateStatus('error', 'Error authenticating with Spotify');
+            }
+        }
+
+        // Initialize Spotify Player
+        async function initializeSpotifyPlayer() {
+            if (!window.Spotify || !accessToken) return;
+
+            spotifyPlayer = new Spotify.Player({
+                name: 'MoodSync Player',
+                getOAuthToken: cb => { cb(accessToken); },
+                volume: 0.5
+            });
+
+            spotifyPlayer.addListener('ready', ({ device_id }) => {
+                console.log('Spotify Player Ready with Device ID', device_id);
+                spotifyDeviceId = device_id;
+                updateStatus('active', 'Spotify player ready! 🎧');
+            });
+
+            spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+                console.log('Device ID has gone offline', device_id);
+            });
+
+            spotifyPlayer.addListener('player_state_changed', (state) => {
+                if (!state) return;
+
+                const track = state.track_window.current_track;
+                const isPlaying = !state.paused;
+
+                document.getElementById('trackName').textContent = track.name;
+                document.getElementById('trackArtist').textContent = track.artists.map(a => a.name).join(', ');
+                document.getElementById('trackCover').src = track.album.images[0]?.url || '';
+                document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+                document.getElementById('spotifyPlayerControls').classList.add('active');
+            });
+
+            await spotifyPlayer.connect();
+        }
+
+        // Connect to YouTube Music
+        async function connectYouTube() {
+            try {
+                if (!youtubeAPIReady) {
+                    updateStatus('loading', 'Loading YouTube API...');
+                    setTimeout(() => connectYouTube(), 1000);
+                    return;
+                }
+
+                youtubeConnected = true;
+                updateConnectButton('youtube', true);
+                updateInsights('musicPlatforms', 'YouTube Music connected successfully! 📺');
+                updateStatus('active', 'YouTube Music ready! 📺');
+
+                // Show YouTube player container
+                document.getElementById('youtubePlayerContainer').classList.add('active');
+
+            } catch (error) {
+                console.error('YouTube connection error:', error);
+                updateStatus('error', 'Error connecting to YouTube Music');
+            }
+        }
+
+        // Update connect button state
+        function updateConnectButton(platform, connected) {
+            const btn = document.getElementById(platform + 'Connect');
+            if (connected) {
+                btn.textContent = platform === 'spotify' ? '🎧 Connected to Spotify' : '📺 Connected to YouTube';
+                btn.style.opacity = '0.7';
+                btn.disabled = true;
+            }
+        }
+
+        // Switch between platforms
+        function switchPlatform(platform) {
+            currentPlatform = platform;
+            
+            // Update tab styles
+            document.querySelectorAll('.platform-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-platform="${platform}"]`).classList.add('active');
+
+            // Show/hide player controls
+            document.getElementById('spotifyPlayerControls').style.display = 
+                platform === 'spotify' ? 'block' : 'none';
+            document.getElementById('youtubePlayerControls').style.display = 
+                platform === 'youtube' ? 'block' : 'none';
+            document.getElementById('youtubePlayerContainer').style.display = 
+                platform === 'youtube' && youtubeConnected ? 'block' : 'none';
+
+            // Update recommendations
+            if (currentEmotion !== 'neutral') {
+                updateRecommendations(currentEmotion);
+            }
+        }
+
+        // Play track based on platform
+        async function playTrack(track) {
+            if (currentPlatform === 'spotify' && spotifyPlayer && accessToken) {
+                await playSpotifyTrack(track);
+            } else if (currentPlatform === 'youtube' && youtubeConnected) {
+                playYouTubeTrack(track);
+            } else {
+                // Fallback: open in new tab
+                const url = currentPlatform === 'spotify' 
+                    ? `https://open.spotify.com/track/${track.uri.split(':')[2]}`
+                    : `https://www.youtube.com/watch?v=${track.youtubeId}`;
+                window.open(url, '_blank');
+            }
+        }
+
+        // Play Spotify track
+        async function playSpotifyTrack(track) {
+            try {
+                const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uris: [track.uri]
+                    }),
+                });
+
+                if (response.status === 204) {
+                    console.log('Spotify track started successfully');
+                } else {
+                    console.error('Error starting Spotify track:', response.status);
+                }
+            } catch (error) {
+                console.error('Error playing Spotify track:', error);
+            }
+        }
+
+        // Play YouTube track
+        function playYouTubeTrack(track) {
+            if (!youtubePlayer) return;
+
+            // Update current track info
+            document.getElementById('ytCurrentTitle').textContent = track.name;
+            document.getElementById('ytCurrentArtist').textContent = track.artist;
+            document.getElementById('ytTitle').textContent = track.name;
+            document.getElementById('ytArtist').textContent = track.artist;
+
+            // Load and play video
+            youtubePlayer.loadVideoById(track.youtubeId);
+            document.getElementById('youtubePlayerControls').classList.add('active');
+            document.getElementById('youtubeOverlay').classList.remove('hidden');
+
+            // Update playlist
+            currentPlaylist = MUSIC_RECOMMENDATIONS[currentEmotion] || [];
+            currentTrackIndex = currentPlaylist.findIndex(t => t.youtubeId === track.youtubeId);
+        }
+
+        // YouTube player controls
+        function ytTogglePlayback() {
+            if (!youtubePlayer) return;
+            
+            const state = youtubePlayer.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                youtubePlayer.pauseVideo();
+            } else {
+                youtubePlayer.playVideo();
+            }
+        }
+
+        function ytNextTrack() {
+            if (currentPlaylist.length === 0) return;
+            
+            currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+            playYouTubeTrack(currentPlaylist[currentTrackIndex]);
+        }
+
+        function ytPreviousTrack() {
+            if (currentPlaylist.length === 0) return;
+            
+            currentTrackIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : currentPlaylist.length - 1;
+            playYouTubeTrack(currentPlaylist[currentTrackIndex]);
+        }
+
+        // Spotify player controls
+        async function togglePlayback() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.togglePlay();
+        }
+
+        async function nextTrack() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.nextTrack();
+        }
+
+        async function previousTrack() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.previousTrack();
+        }
+
+        // Load Face-API models
+        async function loadModels() {
+            try {
+                updateStatus('loading', 'Loading Face-API models...');
+                
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
                 
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
                 ]);
-
-                // Initialize UI
-                initializeEmotionGrid();
-
-                updateStatus('✅ FaceAPI.js models loaded! Ready for real emotion recognition.', 'active');
-                console.log('FaceAPI.js models loaded successfully');
+                
+                updateStatus('active', 'Face-API models loaded successfully!');
+                document.getElementById('startBtn').disabled = false;
                 
             } catch (error) {
-                console.error('Initialization error:', error);
-                updateStatus('❌ Error loading models. Please refresh and try again.', 'error');
+                console.error('Error loading models:', error);
+                updateStatus('error', 'Error loading Face-API models');
             }
         }
 
-        // Main detection loop using FaceAPI.js
-        async function detectEmotions() {
-            if (!isRunning) return;
-
-            const webcam = document.getElementById('webcam');
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Set canvas size to match video
-            canvas.width = webcam.videoWidth;
-            canvas.height = webcam.videoHeight;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            try {
-                // Detect faces and expressions using FaceAPI.js
-                const detections = await faceapi
-                    .detectAllFaces(webcam, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceExpressions();
-                
-                if (detections.length > 0) {
-                    const detection = detections[0];
-                    
-                    // Draw face detection box
-                    drawFaceBoundingBox(ctx, detection);
-                    
-                    // Get emotion predictions from FaceAPI.js
-                    const emotions = detection.expressions;
-                    
-                    // Update UI with real emotion data
-                    updateEmotionDisplay(emotions);
-                    recordEmotionHistory(emotions);
-                    
-                    // Update stats
-                    updateStats(detections.length, detection.detection.score);
-                } else {
-                    updateStats(0, 0);
-                }
-                
-            } catch (error) {
-                console.error('Detection error:', error);
-            }
-            
-            updateFPS();
-            
-            // Continue detection loop
-            if (isRunning) {
-                requestAnimationFrame(detectEmotions);
-            }
-        }
-
-        // Draw face bounding box
-        function drawFaceBoundingBox(ctx, detection) {
-            const box = detection.detection.box;
-            
-            // Draw bounding box
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(box.x, box.y, box.width, box.height);
-            
-            // Draw confidence
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
-            ctx.fillRect(box.x, box.y - 25, box.width, 20);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(
-                `Face ${(detection.detection.score * 100).toFixed(1)}%`,
-                box.x + box.width / 2,
-                box.y - 10
-            );
-        }
-
-        // Update emotion display with FaceAPI.js results
-        function updateEmotionDisplay(emotions) {
-            let dominantEmotion = '';
-            let maxConfidence = 0;
-            
-            Object.entries(emotions).forEach(([emotion, confidence]) => {
-                const card = document.getElementById(`${emotion}-card`);
-                const confidenceEl = document.getElementById(`${emotion}-confidence`);
-                const barEl = document.getElementById(`${emotion}-bar`);
-                
-                if (card && confidenceEl && barEl) {
-                    confidenceEl.textContent = `${(confidence * 100).toFixed(1)}%`;
-                    barEl.style.width = `${confidence * 100}%`;
-                    
-                    card.classList.remove('dominant');
-                    
-                    if (confidence > maxConfidence) {
-                        maxConfidence = confidence;
-                        dominantEmotion = emotion;
-                    }
-                }
-            });
-            
-            // Highlight dominant emotion and update current mood
-            if (dominantEmotion) {
-                const dominantCard = document.getElementById(`${dominantEmotion}-card`);
-                if (dominantCard) {
-                    dominantCard.classList.add('dominant');
-                }
-                
-                currentEmotion = dominantEmotion;
-                updateCurrentMoodDisplay(dominantEmotion, maxConfidence);
-                updateMusicRecommendations(dominantEmotion);
-                updateMoodInsights(dominantEmotion);
-            }
-        }
-
-        // Update current mood display
-        function updateCurrentMoodDisplay(emotion, confidence) {
-            const moodDisplay = document.getElementById('currentMood');
-            const config = EMOTION_CONFIG[emotion];
-            moodDisplay.innerHTML = `
-                <div style="font-size: 2em; margin-bottom: 5px;">${config.emoji}</div>
-                <div style="font-size: 1.1em; color: #333;">
-                    Feeling <strong>${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</strong>
-                </div>
-                <div style="font-size: 0.9em; color: #666; margin-top: 3px;">
-                    ${(confidence * 100).toFixed(1)}% confidence
-                </div>
-            `;
-        }
-
-        // Update music recommendations based on emotion
-        function updateMusicRecommendations(emotion) {
-            const recommendations = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
-            const currentRecs = recommendations[currentPlatform] || [];
-            
-            const recsList = document.getElementById('recommendationsList');
-            recsList.innerHTML = '';
-            
-            currentRecs.forEach((track, index) => {
-                const item = document.createElement('div');
-                item.className = 'recommendation-item';
-                item.onclick = () => playTrack(track, currentPlatform);
-                
-                item.innerHTML = `
-                    <div class="track-artwork">${index + 1}</div>
-                    <div class="track-info">
-                        <div class="track-name">${track.name}</div>
-                        <div class="track-artist">${track.artist}</div>
-                    </div>
-                    <div class="mood-match">${track.match}</div>
-                `;
-                
-                recsList.appendChild(item);
-            });
-        }
-
-        // Update mood insights
-        function updateMoodInsights(emotion) {
-            const insights = getMoodInsights(emotion);
-            
-            document.getElementById('emotionPattern').textContent = insights.pattern;
-            document.getElementById('musicPersonality').textContent = insights.musicPersonality;
-            document.getElementById('moodRecommendation').textContent = insights.recommendation;
-        }
-
-        // Get mood insights based on emotion
-        function getMoodInsights(emotion) {
-            const insights = {
-                'happy': {
-                    pattern: 'You\'re in a great mood! High energy and positivity detected.',
-                    musicPersonality: 'You enjoy upbeat, energetic music that matches your vibe.',
-                    recommendation: 'Perfect time for social activities, creative work, or exercise!'
-                },
-                'sad': {
-                    pattern: 'Feeling down right now. Low energy and melancholy detected.',
-                    musicPersonality: 'You prefer slower, emotional music that resonates with your feelings.',
-                    recommendation: 'Consider gentle activities like reading, meditation, or calling a friend.'
-                },
-                'angry': {
-                    pattern: 'High intensity emotions detected. You seem frustrated or angry.',
-                    musicPersonality: 'You might enjoy intense, aggressive music to channel energy.',
-                    recommendation: 'Try physical exercise, deep breathing, or expressing yourself creatively.'
-                },
-                'surprised': {
-                    pattern: 'Something unexpected caught your attention! High alertness detected.',
-                    musicPersonality: 'You\'re open to experimental and unique musical experiences.',
-                    recommendation: 'Great time to try something new or explore unfamiliar territory.'
-                },
-                'fearful': {
-                    pattern: 'Anxiety or worry detected. You might be feeling uncertain.',
-                    musicPersonality: 'Calming, soothing music helps you feel more secure.',
-                    recommendation: 'Take some deep breaths, try relaxation techniques, or seek comfort.'
-                },
-                'disgusted': {
-                    pattern: 'Strong negative reaction detected. Something is bothering you.',
-                    musicPersonality: 'You might prefer darker or more alternative music right now.',
-                    recommendation: 'Distance yourself from whatever\'s causing this feeling.'
-                },
-                'neutral': {
-                    pattern: 'Calm and balanced emotional state. You\'re feeling stable.',
-                    musicPersonality: 'You enjoy a wide variety of music and are open to suggestions.',
-                    recommendation: 'Good time for focused work, learning, or planning.'
-                }
-            };
-            
-            return insights[emotion] || insights['neutral'];
-        }
-
-        // Record emotion history
-        function recordEmotionHistory(emotions) {
-            const dominant = Object.entries(emotions).reduce(
-                (max, [emotion, confidence]) => confidence > max.confidence ? {emotion, confidence} : max,
-                {emotion: '', confidence: 0}
-            );
-            
-            emotionHistory.push({
-                timestamp: Date.now(),
-                emotions: {...emotions},
-                dominant: dominant
-            });
-            
-            if (emotionHistory.length > 100) {
-                emotionHistory.shift();
-            }
-        }
-
-        // Initialize emotion grid
-        function initializeEmotionGrid() {
-            const grid = document.getElementById('emotionGrid');
-            grid.innerHTML = '';
-            
-            Object.entries(EMOTION_CONFIG).forEach(([emotion, config]) => {
-                const card = document.createElement('div');
-                card.className = 'emotion-card';
-                card.id = `${emotion}-card`;
-                card.innerHTML = `
-                    <div class="emotion-icon">${config.emoji}</div>
-                    <div class="emotion-name">${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</div>
-                    <div class="emotion-confidence" id="${emotion}-confidence">0.0%</div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" id="${emotion}-bar" style="width: 0%"></div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        // Update statistics
-        function updateStats(faceCount, confidence) {
-            document.getElementById('faceCount').textContent = faceCount;
-            document.getElementById('confidence').textContent = `${(confidence * 100).toFixed(1)}%`;
-        }
-
-        // Update FPS counter
-        function updateFPS() {
-            frameCount++;
-            const currentTime = performance.now();
-            
-            if (currentTime - lastTime >= 1000) {
-                const fps = Math.round(frameCount * 1000 / (currentTime - lastTime));
-                document.getElementById('fps').textContent = fps;
-                frameCount = 0;
-                lastTime = currentTime;
-            }
-        }
-
-        // Start camera and analysis
+        // Start analysis
         async function startAnalysis() {
             try {
-                const webcam = document.getElementById('webcam');
-                
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 640 },
-                        height: { ideal: 480 },
-                        facingMode: 'user'
-                    }
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
                 });
                 
-                webcam.srcObject = stream;
+                const video = document.getElementById('webcam');
+                video.srcObject = stream;
                 
-                await new Promise((resolve) => {
-                    webcam.onloadedmetadata = () => {
-                        webcam.play();
-                        resolve();
-                    };
+                await new Promise(resolve => {
+                    video.onloadedmetadata = resolve;
                 });
                 
                 isRunning = true;
@@ -955,14 +1375,12 @@
                 document.getElementById('stopBtn').disabled = false;
                 document.getElementById('syncBtn').disabled = false;
                 
-                updateStatus('🎯 Real-time emotion analysis active using FaceAPI.js!', 'active');
-                
-                // Start detection loop
+                updateStatus('active', 'Emotion detection active');
                 detectEmotions();
                 
             } catch (error) {
-                console.error('Camera start error:', error);
-                updateStatus('❌ Camera access denied. Please allow camera permissions.', 'error');
+                console.error('Error starting analysis:', error);
+                updateStatus('error', 'Error accessing camera');
             }
         }
 
@@ -970,579 +1388,194 @@
         function stopAnalysis() {
             isRunning = false;
             
-            const webcam = document.getElementById('webcam');
-            if (webcam.srcObject) {
-                const tracks = webcam.srcObject.getTracks();
-                tracks.forEach(track => track.stop());
-                webcam.srcObject = null;
+            const video = document.getElementById('webcam');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
             }
             
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
             document.getElementById('syncBtn').disabled = true;
             
+            updateStatus('loading', 'Analysis stopped');
+            
+            // Clear canvas
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Detect emotions
+        async function detectEmotions() {
+            if (!isRunning) return;
             
-            updateStatus('✅ Analysis stopped. Models remain loaded for quick restart.', 'loading');
-        }
-
-        // Spotify OAuth configuration
-        const SPOTIFY_CONFIG = {
-            clientId: 'e642820d6fd04ac699ad222cb2e9ad08', // Your Spotify app client ID
-            redirectUri: window.location.origin + '/callback',
-            scopes: [
-                'playlist-modify-public',
-                'playlist-modify-private', 
-                'user-read-private',
-                'user-read-email',
-                'user-top-read',
-                'user-read-recently-played'
-            ]
-        };
-
-        // YouTube API configuration  
-        const YOUTUBE_CONFIG = {
-            apiKey: 'AIzaSyAQVN2fm7KB6qsLKidp2n2veUKhpYrEFHI', // Your YouTube Data API key
-            discoveryDoc: 'https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'
-        };
-
-        let spotifyAccessToken = null;
-        let youtubeAPI = null;
-
-        // Real Spotify OAuth integration
-        async function connectSpotify() {
-            try {
-                // Check if already connected
-                const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get('code');
-                
-                if (code) {
-                    // Exchange code for access token
-                    await exchangeSpotifyCode(code);
-                    return;
-                }
-
-                // Start OAuth flow
-                const authUrl = `https://accounts.spotify.com/authorize?` +
-                    `client_id=${SPOTIFY_CONFIG.clientId}&` +
-                    `response_type=code&` +
-                    `redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}&` +
-                    `scope=${encodeURIComponent(SPOTIFY_CONFIG.scopes.join(' '))}`;
-                
-                window.location.href = authUrl;
-                
-            } catch (error) {
-                console.error('Spotify connection error:', error);
-                alert('Error connecting to Spotify. Please check your configuration.');
-            }
-        }
-
-        // Exchange authorization code for access token
-        async function exchangeSpotifyCode(code) {
-            try {
-                // In production, this should be done on your backend server
-                const response = await fetch('https://accounts.spotify.com/api/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        grant_type: 'authorization_code',
-                        code: code,
-                        redirect_uri: SPOTIFY_CONFIG.redirectUri,
-                        client_id: SPOTIFY_CONFIG.clientId,
-                        // Note: In production, client_secret should be handled server-side
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    spotifyAccessToken = data.access_token;
-                    
-                    // Update UI
-                    document.getElementById('spotifyConnect').textContent = '✅ Connected to Spotify';
-                    document.getElementById('spotifyConnect').disabled = true;
-                    
-                    // Get user's music taste for better recommendations
-                    await analyzeUserMusicTaste();
-                    
-                    // Clear URL parameters
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            } catch (error) {
-                console.error('Token exchange error:', error);
-            }
-        }
-
-        // Analyze user's music taste using Spotify API
-        async function analyzeUserMusicTaste() {
-            if (!spotifyAccessToken) return;
-
-            try {
-                // Get user's top tracks
-                const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=20&time_range=medium_term', {
-                    headers: {
-                        'Authorization': `Bearer ${spotifyAccessToken}`
-                    }
-                });
-
-                if (topTracksResponse.ok) {
-                    const topTracks = await topTracksResponse.json();
-                    
-                    // Analyze audio features
-                    const trackIds = topTracks.items.map(track => track.id).join(',');
-                    const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
-                        headers: {
-                            'Authorization': `Bearer ${spotifyAccessToken}`
-                        }
-                    });
-
-                    if (featuresResponse.ok) {
-                        const features = await featuresResponse.json();
-                        const musicProfile = analyzeMusicProfile(features.audio_features);
-                        
-                        document.getElementById('musicPersonality').innerHTML = 
-                            `✅ Your music DNA: ${musicProfile.energy > 0.6 ? 'High Energy' : 'Chill'} • ` +
-                            `${musicProfile.valence > 0.6 ? 'Positive' : 'Moody'} • ` +
-                            `${musicProfile.danceability > 0.6 ? 'Dance-focused' : 'Listening-focused'}`;
-                    }
-                }
-            } catch (error) {
-                console.error('Music taste analysis error:', error);
-            }
-        }
-
-        // Analyze user's music profile
-        function analyzeMusicProfile(audioFeatures) {
-            const validFeatures = audioFeatures.filter(f => f !== null);
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
             
-            if (validFeatures.length === 0) {
-                return { energy: 0.5, valence: 0.5, danceability: 0.5 };
-            }
-
-            const avgEnergy = validFeatures.reduce((sum, f) => sum + f.energy, 0) / validFeatures.length;
-            const avgValence = validFeatures.reduce((sum, f) => sum + f.valence, 0) / validFeatures.length;
-            const avgDanceability = validFeatures.reduce((sum, f) => sum + f.danceability, 0) / validFeatures.length;
-
-            return {
-                energy: avgEnergy,
-                valence: avgValence,
-                danceability: avgDanceability
-            };
-        }
-
-        // Create real Spotify playlist based on emotion
-        async function createSpotifyPlaylist(emotion) {
-            if (!spotifyAccessToken) {
-                alert('Please connect to Spotify first!');
-                return null;
-            }
-
+            // Set canvas dimensions
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
             try {
-                // Get user profile
-                const profileResponse = await fetch('https://api.spotify.com/v1/me', {
-                    headers: {
-                        'Authorization': `Bearer ${spotifyAccessToken}`
-                    }
-                });
-
-                if (!profileResponse.ok) throw new Error('Failed to get user profile');
+                const detections = await faceapi
+                    .detectAllFaces(video)
+                    .withFaceExpressions()
+                    .withFaceLandmarks();
                 
-                const profile = await profileResponse.json();
-
-                // Create playlist
-                const playlistName = `MoodSync: ${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Vibes`;
-                const playlistResponse = await fetch(`https://api.spotify.com/v1/users/${profile.id}/playlists`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${spotifyAccessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: playlistName,
-                        description: `AI-generated playlist based on detected ${emotion} emotion using FaceAPI.js`,
-                        public: false
-                    })
-                });
-
-                if (!playlistResponse.ok) throw new Error('Failed to create playlist');
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                const playlist = await playlistResponse.json();
-
-                // Search for tracks based on emotion
-                const tracks = await searchSpotifyTracksByEmotion(emotion);
+                // Update stats
+                document.getElementById('faceCount').textContent = detections.length;
                 
-                if (tracks.length > 0) {
-                    // Add tracks to playlist
-                    const trackUris = tracks.slice(0, 20).map(track => track.uri); // Max 20 tracks
+                if (detections.length > 0) {
+                    // Draw detections
+                    faceapi.draw.drawDetections(canvas, detections);
+                    faceapi.draw.drawFaceExpressions(canvas, detections);
                     
-                    await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${spotifyAccessToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            uris: trackUris
-                        })
-                    });
-                }
-
-                return playlist;
-
-            } catch (error) {
-                console.error('Playlist creation error:', error);
-                return null;
-            }
-        }
-
-        // Search Spotify tracks by emotion
-        async function searchSpotifyTracksByEmotion(emotion) {
-            const emotionKeywords = {
-                'happy': ['happy', 'upbeat', 'energetic', 'party', 'dance', 'celebration'],
-                'sad': ['sad', 'melancholy', 'heartbreak', 'emotional', 'ballad', 'slow'],
-                'angry': ['angry', 'rage', 'rock', 'metal', 'aggressive', 'intense'],
-                'surprised': ['unexpected', 'electronic', 'experimental', 'unique', 'weird'],
-                'fearful': ['calm', 'peaceful', 'relaxing', 'anxiety relief', 'meditation'],
-                'disgusted': ['alternative', 'grunge', 'dark', 'industrial', 'underground'],
-                'neutral': ['chill', 'ambient', 'focus', 'study', 'background', 'instrumental']
-            };
-
-            const keywords = emotionKeywords[emotion] || emotionKeywords['neutral'];
-            const tracks = [];
-
-            try {
-                for (const keyword of keywords.slice(0, 3)) { // Search top 3 keywords
-                    const response = await fetch(
-                        `https://api.spotify.com/v1/search?q=${encodeURIComponent(keyword)}&type=track&limit=10`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${spotifyAccessToken}`
-                            }
-                        }
+                    // Get primary emotion
+                    const expressions = detections[0].expressions;
+                    const emotion = Object.keys(expressions).reduce((a, b) => 
+                        expressions[a] > expressions[b] ? a : b
                     );
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        tracks.push(...data.tracks.items);
+                    
+                    const confidence = Math.round(expressions[emotion] * 100);
+                    
+                    // Update display
+                    currentEmotion = emotion;
+                    updateEmotionDisplay(expressions);
+                    updateRecommendations(emotion);
+                    updateInsights('emotionPattern', 
+                        `Current dominant emotion: ${EMOTION_CONFIG[emotion].emoji} ${emotion} (${confidence}% confidence)`
+                    );
+                    
+                    // Update stats
+                    document.getElementById('confidence').textContent = confidence + '%';
+                    
+                    // Add to history
+                    emotionHistory.push({ emotion, confidence, timestamp: Date.now() });
+                    if (emotionHistory.length > 100) {
+                        emotionHistory = emotionHistory.slice(-100);
                     }
                 }
-
-                // Remove duplicates and shuffle
-                const uniqueTracks = tracks.filter((track, index, self) => 
-                    index === self.findIndex(t => t.id === track.id)
-                );
                 
-                return shuffleArray(uniqueTracks);
-
-            } catch (error) {
-                console.error('Spotify search error:', error);
-                return [];
-            }
-        }
-
-        // Initialize YouTube API
-        async function initializeYouTubeAPI() {
-            try {
-                if (typeof gapi !== 'undefined') {
-                    await new Promise(resolve => gapi.load('client', resolve));
-                    await gapi.client.init({
-                        apiKey: YOUTUBE_CONFIG.apiKey,
-                        discoveryDocs: [YOUTUBE_CONFIG.discoveryDoc]
-                    });
-                    youtubeAPI = gapi.client.youtube;
-                    console.log('YouTube API initialized');
+                // Calculate FPS
+                frameCount++;
+                const currentTime = performance.now();
+                if (currentTime - lastTime >= 1000) {
+                    document.getElementById('fps').textContent = frameCount;
+                    frameCount = 0;
+                    lastTime = currentTime;
                 }
+                
             } catch (error) {
-                console.error('YouTube API initialization error:', error);
+                console.error('Detection error:', error);
             }
-        }
-
-        // Search YouTube for emotion-based playlists
-        async function searchYouTubePlaylistsByEmotion(emotion) {
-            if (!youtubeAPI) {
-                console.warn('YouTube API not initialized');
-                return [];
-            }
-
-            try {
-                const query = `${emotion} music playlist`;
-                const response = await youtubeAPI.search.list({
-                    part: 'snippet',
-                    q: query,
-                    type: 'playlist',
-                    maxResults: 10
-                });
-
-                return response.result.items.map(item => ({
-                    id: item.id.playlistId,
-                    title: item.snippet.title,
-                    description: item.snippet.description,
-                    thumbnail: item.snippet.thumbnails.medium.url,
-                    channelTitle: item.snippet.channelTitle
-                }));
-
-            } catch (error) {
-                console.error('YouTube search error:', error);
-                return [];
-            }
-        }
-
-        // Updated music recommendations with real API integration
-        async function updateMusicRecommendations(emotion) {
-            const recsList = document.getElementById('recommendationsList');
-            recsList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading recommendations...</div>';
-
-            try {
-                if (currentPlatform === 'spotify' && spotifyAccessToken) {
-                    // Get real Spotify recommendations
-                    const tracks = await searchSpotifyTracksByEmotion(emotion);
-                    displaySpotifyRecommendations(tracks.slice(0, 5));
-                    
-                } else if (currentPlatform === 'youtube' && youtubeAPI) {
-                    // Get real YouTube recommendations
-                    const playlists = await searchYouTubePlaylistsByEmotion(emotion);
-                    displayYouTubeRecommendations(playlists.slice(0, 5));
-                    
-                } else {
-                    // Fallback to demo recommendations
-                    const recommendations = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
-                    const currentRecs = recommendations[currentPlatform] || [];
-                    displayDemoRecommendations(currentRecs);
-                }
-            } catch (error) {
-                console.error('Recommendation error:', error);
-                recsList.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error loading recommendations</div>';
-            }
-        }
-
-        // Display Spotify recommendations
-        function displaySpotifyRecommendations(tracks) {
-            const recsList = document.getElementById('recommendationsList');
-            recsList.innerHTML = '';
-
-            tracks.forEach((track, index) => {
-                const item = document.createElement('div');
-                item.className = 'recommendation-item';
-                item.onclick = () => openSpotifyTrack(track.external_urls.spotify);
-                
-                item.innerHTML = `
-                    <div class="track-artwork">
-                        ${track.album.images.length > 0 ? 
-                            `<img src="${track.album.images[2]?.url || track.album.images[0].url}" 
-                                 style="width: 50px; height: 50px; border-radius: 6px;">` : 
-                            (index + 1)
-                        }
-                    </div>
-                    <div class="track-info">
-                        <div class="track-name">${track.name}</div>
-                        <div class="track-artist">${track.artists.map(a => a.name).join(', ')}</div>
-                    </div>
-                    <div class="mood-match">Real ✓</div>
-                `;
-                
-                recsList.appendChild(item);
-            });
-        }
-
-        // Display YouTube recommendations
-        function displayYouTubeRecommendations(playlists) {
-            const recsList = document.getElementById('recommendationsList');
-            recsList.innerHTML = '';
-
-            playlists.forEach((playlist, index) => {
-                const item = document.createElement('div');
-                item.className = 'recommendation-item';
-                item.onclick = () => openYouTubePlaylist(playlist.id);
-                
-                item.innerHTML = `
-                    <div class="track-artwork">
-                        <img src="${playlist.thumbnail}" 
-                             style="width: 50px; height: 50px; border-radius: 6px;">
-                    </div>
-                    <div class="track-info">
-                        <div class="track-name">${playlist.title}</div>
-                        <div class="track-artist">${playlist.channelTitle}</div>
-                    </div>
-                    <div class="mood-match">Real ✓</div>
-                `;
-                
-                recsList.appendChild(item);
-            });
-        }
-
-        // Display demo recommendations (fallback)
-        function displayDemoRecommendations(tracks) {
-            const recsList = document.getElementById('recommendationsList');
-            recsList.innerHTML = '';
             
-            tracks.forEach((track, index) => {
-                const item = document.createElement('div');
-                item.className = 'recommendation-item';
-                item.onclick = () => playTrack(track, currentPlatform);
+            // Continue detection
+            requestAnimationFrame(detectEmotions);
+        }
+
+        // Update emotion display
+        function updateEmotionDisplay(expressions) {
+            const grid = document.getElementById('emotionGrid');
+            grid.innerHTML = '';
+            
+            Object.entries(expressions).forEach(([emotion, confidence]) => {
+                const card = document.createElement('div');
+                card.className = 'emotion-card';
                 
-                item.innerHTML = `
-                    <div class="track-artwork">${index + 1}</div>
+                if (emotion === currentEmotion) {
+                    card.classList.add('dominant');
+                }
+                
+                const config = EMOTION_CONFIG[emotion];
+                card.innerHTML = `
+                    <div class="emotion-icon">${config.emoji}</div>
+                    <div class="emotion-name">${emotion}</div>
+                    <div class="emotion-confidence">${Math.round(confidence * 100)}%</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            
+            document.getElementById('currentMood').textContent = 
+                `Feeling ${currentEmotion} ${EMOTION_CONFIG[currentEmotion].emoji}`;
+        }
+
+        // Update recommendations
+        function updateRecommendations(emotion) {
+            const list = document.getElementById('recommendationsList');
+            const tracks = MUSIC_RECOMMENDATIONS[emotion] || [];
+            
+            list.innerHTML = tracks.map(track => `
+                <div class="recommendation-item" onclick="playTrack(${JSON.stringify(track).replace(/"/g, '&quot;')})">
+                    <div class="track-artwork">
+                        ${currentPlatform === 'spotify' ? '🎧' : '📺'}
+                    </div>
                     <div class="track-info">
                         <div class="track-name">${track.name}</div>
                         <div class="track-artist">${track.artist}</div>
                     </div>
                     <div class="mood-match">${track.match}</div>
-                `;
-                
-                recsList.appendChild(item);
-            });
+                </div>
+            `).join('');
         }
 
-        // Open Spotify track
-        function openSpotifyTrack(url) {
-            window.open(url, '_blank');
-        }
-
-        // Open YouTube playlist
-        function openYouTubePlaylist(playlistId) {
-            const url = `https://www.youtube.com/playlist?list=${playlistId}`;
-            window.open(url, '_blank');
-        }
-
-        // Enhanced sync to music with real playlist creation
-        async function syncToMusic() {
-            if (!isRunning) {
-                alert('Please start emotion analysis first!');
-                return;
-            }
-            
-            if (currentPlatform === 'spotify' && spotifyAccessToken) {
-                // Create real Spotify playlist
-                const playlist = await createSpotifyPlaylist(currentEmotion);
-                if (playlist) {
-                    alert(`🎵 Real Spotify Playlist Created!\n\n"${playlist.name}"\n\nBased on your detected emotion: ${currentEmotion.toUpperCase()}\n\nOpening playlist in Spotify...`);
-                    window.open(playlist.external_urls.spotify, '_blank');
-                } else {
-                    alert('Failed to create playlist. Please check your Spotify connection.');
-                }
-            } else if (currentPlatform === 'youtube') {
-                // For YouTube, open search results
-                const query = `${currentEmotion} music playlist`;
-                const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-                window.open(url, '_blank');
-                alert(`🎵 Opening YouTube search for ${currentEmotion} music!`);
-            } else {
-                alert('Please connect to a music service first to create real playlists!');
-            }
-        }
-
-        // Utility function to shuffle array
-        function shuffleArray(array) {
-            const shuffled = [...array];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-            return shuffled;
-        }
-
-        // Load Google API for YouTube integration
-        function loadGoogleAPI() {
-            const script = document.createElement('script');
-            script.src = 'https://apis.google.com/js/api.js';
-            script.onload = initializeYouTubeAPI;
-            document.head.appendChild(script);
-        }
-
-        // Initialize app with real API integrations
-        async function initializeApp() {
-            try {
-                console.log('Loading FaceAPI.js models...');
-                updateStatus('Loading pre-trained emotion recognition models...', 'loading');
-                
-                // Load FaceAPI.js models
-                const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
-                
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-                ]);
-
-                // Initialize UI
-                initializeEmotionGrid();
-                
-                // Load Google API for YouTube integration
-                loadGoogleAPI();
-                
-                // Check for Spotify callback
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('code')) {
-                    await exchangeSpotifyCode(urlParams.get('code'));
-                }
-
-                updateStatus('✅ Real ML emotion recognition ready! Connect music services for full integration.', 'active');
-                console.log('MoodSync fully initialized with real APIs');
-                
-            } catch (error) {
-                console.error('Initialization error:', error);
-                updateStatus('❌ Error loading models. Please refresh and try again.', 'error');
-            }
-        }
-
-        // Switch platform (Spotify/YouTube)
-        function switchPlatform(platform) {
-            currentPlatform = platform;
-            
-            document.querySelectorAll('.platform-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelector(`[data-platform="${platform}"]`).classList.add('active');
-            
-            updateMusicRecommendations(currentEmotion);
-        }
-
-        // Play track (demo function)
-        function playTrack(track, platform) {
-            if (platform === 'spotify') {
-                alert(`🎵 Playing on Spotify:\n"${track.name}" by ${track.artist}\n\nIn a real implementation, this would open Spotify and play the track.`);
-            } else {
-                alert(`📺 Playing on YouTube:\n"${track.name}" by ${track.artist}\n\nIn a real implementation, this would open YouTube and play the video.`);
-            }
-        }
-
-        // Sync to music (create playlist based on mood)
+        // Sync to music - plays a random track from current emotion
         function syncToMusic() {
-            if (!isRunning) {
-                alert('Please start emotion analysis first!');
-                return;
+            if (currentEmotion === 'neutral') return;
+            
+            const tracks = MUSIC_RECOMMENDATIONS[currentEmotion] || [];
+            if (tracks.length > 0) {
+                const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+                playTrack(randomTrack);
             }
-            
-            const recommendations = MUSIC_RECOMMENDATIONS[currentEmotion] || MUSIC_RECOMMENDATIONS['neutral'];
-            const tracks = recommendations[currentPlatform] || [];
-            
-            alert(`🎵 MoodSync Playlist Created!\n\nBased on your current mood: ${currentEmotion.toUpperCase()}\n\nPlaylist includes ${tracks.length} tracks:\n${tracks.slice(0, 3).map(t => `• ${t.name} - ${t.artist}`).join('\n')}\n\nIn a real implementation, this would create a playlist in your ${currentPlatform === 'spotify' ? 'Spotify' : 'YouTube'} account using the real emotion data from FaceAPI.js.`);
         }
 
-        // Update status display
-        function updateStatus(message, type) {
+        // Update status
+        function updateStatus(type, message) {
             const status = document.getElementById('status');
             status.className = `status-indicator status-${type}`;
             
-            const spinner = type === 'loading' ? '<div class="loading-spinner"></div>' : '';
-            status.innerHTML = `${spinner}<span>${message}</span>`;
+            const icon = type === 'loading' ? '<div class="loading-spinner"></div>' :
+                        type === 'active' ? '✅' :
+                        type === 'error' ? '❌' : '';
+            
+            status.innerHTML = `${icon} <span>${message}</span>`;
         }
 
-        // Initialize app on load
-        window.addEventListener('load', async () => {
-            console.log('Initializing MoodSync with professional FaceAPI.js...');
-            await initializeApp();
-            console.log('MoodSync ready for real emotion-based music recommendations!');
-        });
-        
-        // Cleanup on unload
-        window.addEventListener('beforeunload', () => {
-            if (isRunning) {
-                stopAnalysis();
+        // Update insights
+        function updateInsights(section, text) {
+            document.getElementById(section).textContent = text;
+        }
+
+        // Initialize everything
+        async function init() {
+            // Check for Spotify token in localStorage
+            const savedToken = localStorage.getItem('spotify_access_token');
+            if (savedToken) {
+                accessToken = savedToken;
+                await initializeSpotifyPlayer();
+                updateConnectButton('spotify', true);
             }
-        });
-    </script>
-</body>
-</html>
+
+            // Load Face-API models
+            await loadModels();
+
+            // Initialize YouTube API
+            if (!youtubeAPIReady && window.YT) {
+                onYouTubeIframeAPIReady();
+            }
+
+            // Update initial insights
+            updateInsights('moodRecommendation', 'Start emotion detection to get personalized recommendations');
+        }
+
+        // Start initialization when page loads
+        window.addEventListener('load', init);
