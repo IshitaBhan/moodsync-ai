@@ -1416,25 +1416,95 @@ Current URL: ${window.location.href.split('?')[0]}
             await spotifyPlayer.previousTrack();
         }
 
-        // Load Face-API models
+        // Load Face-API models with optimized loading
         async function loadModels() {
             try {
-                updateStatus('loading', 'Loading Face-API models...');
+                updateStatus('loading', 'Loading Face-API models... (this may take 30-60 seconds)');
                 
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
+                // Use multiple CDN fallbacks for better reliability
+                const MODEL_URLS = [
+                    'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model',
+                    'https://unpkg.com/@vladmandic/face-api@1.7.13/model',
+                    'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
+                ];
                 
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-                ]);
+                let modelsLoaded = false;
                 
-                updateStatus('active', 'Face-API models loaded successfully!');
+                for (const MODEL_URL of MODEL_URLS) {
+                    try {
+                        updateStatus('loading', `Trying CDN: ${MODEL_URL.split('/')[2]}...`);
+                        
+                        // Load only essential models for faster startup
+                        await Promise.all([
+                            faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                            // Removed face landmarks for faster loading - not essential for emotion detection
+                        ]);
+                        
+                        modelsLoaded = true;
+                        break;
+                        
+                    } catch (error) {
+                        console.warn(`Failed to load from ${MODEL_URL}:`, error);
+                        continue;
+                    }
+                }
+                
+                if (!modelsLoaded) {
+                    throw new Error('All CDN sources failed');
+                }
+                
+                updateStatus('active', 'Face-API models loaded successfully! 🎯');
                 document.getElementById('startBtn').disabled = false;
+                
+                // Auto-start analysis if user has been waiting
+                updateInsights('moodTracking', 'Models loaded! Click Start to begin emotion detection.');
                 
             } catch (error) {
                 console.error('Error loading models:', error);
-                updateStatus('error', 'Error loading Face-API models');
+                updateStatus('error', 'Error loading Face-API models. Try refreshing the page.');
+                
+                // Offer alternative
+                setTimeout(() => {
+                    updateStatus('loading', 'Retrying with different CDN...');
+                    loadModelsAlternative();
+                }, 3000);
+            }
+        }
+
+        // Alternative model loading method
+        async function loadModelsAlternative() {
+            try {
+                updateStatus('loading', 'Loading lightweight models...');
+                
+                // Try loading from the original face-api.js instead of vladmandic
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+                script.onload = async () => {
+                    try {
+                        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+                        
+                        await Promise.all([
+                            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                        ]);
+                        
+                        updateStatus('active', 'Lightweight models loaded! 🎯');
+                        document.getElementById('startBtn').disabled = false;
+                        
+                    } catch (error) {
+                        updateStatus('error', 'All model loading attempts failed. Please refresh and try again.');
+                    }
+                };
+                script.onerror = () => {
+                    updateStatus('error', 'Could not load Face-API library. Please check your internet connection.');
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                console.error('Alternative loading failed:', error);
+                updateStatus('error', 'Face-API unavailable. Please refresh the page.');
             }
         }
 
@@ -1488,7 +1558,7 @@ Current URL: ${window.location.href.split('?')[0]}
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Detect emotions
+        // Optimized emotion detection
         async function detectEmotions() {
             if (!isRunning) return;
             
@@ -1496,15 +1566,20 @@ Current URL: ${window.location.href.split('?')[0]}
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             
-            // Set canvas dimensions
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Set canvas dimensions only once
+            if (canvas.width !== video.videoWidth) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            }
             
             try {
+                // Use faster detection options
                 const detections = await faceapi
-                    .detectAllFaces(video)
-                    .withFaceExpressions()
-                    .withFaceLandmarks();
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ 
+                        minConfidence: 0.5,
+                        maxResults: 1 // Only detect one face for better performance
+                    }))
+                    .withFaceExpressions();
                 
                 // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1513,12 +1588,17 @@ Current URL: ${window.location.href.split('?')[0]}
                 document.getElementById('faceCount').textContent = detections.length;
                 
                 if (detections.length > 0) {
-                    // Draw detections
-                    faceapi.draw.drawDetections(canvas, detections);
-                    faceapi.draw.drawFaceExpressions(canvas, detections);
+                    // Draw simplified detections (faster rendering)
+                    const detection = detections[0];
+                    const box = detection.detection.box;
+                    
+                    // Draw face box
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
                     
                     // Get primary emotion
-                    const expressions = detections[0].expressions;
+                    const expressions = detection.expressions;
                     const emotion = Object.keys(expressions).reduce((a, b) => 
                         expressions[a] > expressions[b] ? a : b
                     );
@@ -1528,36 +1608,43 @@ Current URL: ${window.location.href.split('?')[0]}
                     // Update display
                     currentEmotion = emotion;
                     updateEmotionDisplay(expressions);
-                    updateRecommendations(emotion);
+                    
+                    // Only update recommendations if emotion changed significantly
+                    if (!lastDetectedEmotion || lastDetectedEmotion !== emotion) {
+                        updateRecommendations(emotion);
+                        lastDetectedEmotion = emotion;
+                    }
+                    
                     updateInsights('emotionPattern', 
-                        `Current dominant emotion: ${EMOTION_CONFIG[emotion].emoji} ${emotion} (${confidence}% confidence)`
+                        `Current: ${EMOTION_CONFIG[emotion].emoji} ${emotion} (${confidence}%)`
                     );
                     
                     // Update stats
                     document.getElementById('confidence').textContent = confidence + '%';
                     
-                    // Add to history
+                    // Add to history (limit to prevent memory issues)
                     emotionHistory.push({ emotion, confidence, timestamp: Date.now() });
-                    if (emotionHistory.length > 100) {
-                        emotionHistory = emotionHistory.slice(-100);
+                    if (emotionHistory.length > 50) { // Reduced from 100
+                        emotionHistory = emotionHistory.slice(-50);
                     }
                 }
                 
-                // Calculate FPS
+                // Calculate FPS (less frequently)
                 frameCount++;
                 const currentTime = performance.now();
-                if (currentTime - lastTime >= 1000) {
-                    document.getElementById('fps').textContent = frameCount;
+                if (currentTime - lastTime >= 2000) { // Update every 2 seconds instead of 1
+                    document.getElementById('fps').textContent = Math.round(frameCount / 2);
                     frameCount = 0;
                     lastTime = currentTime;
                 }
                 
             } catch (error) {
                 console.error('Detection error:', error);
+                // Don't spam errors, just continue
             }
             
-            // Continue detection
-            requestAnimationFrame(detectEmotions);
+            // Continue detection with slight delay for better performance
+            setTimeout(() => requestAnimationFrame(detectEmotions), 100); // 10 FPS instead of 60
         }
 
         // Update emotion display
