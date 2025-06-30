@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodSync - AI Music Recommendation System</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@latest"></script>
+    <title>MoodSync - Real AI Music Recommendation System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
     <style>
         * {
             margin: 0;
@@ -389,14 +388,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .face-crop {
-            position: fixed;
-            top: -1000px;
-            left: -1000px;
-            opacity: 0;
-            pointer-events: none;
-        }
-
         @media (max-width: 1200px) {
             .main-grid {
                 grid-template-columns: 1fr 1fr;
@@ -414,8 +405,8 @@
     <div class="container">
         <div class="header">
             <h1>MoodSync</h1>
-            <div class="ml-badge">🎵 AI-Powered Music Recommendation System</div>
-            <p>Real emotion recognition with personalized music recommendations from Spotify & YouTube</p>
+            <div class="ml-badge">🎵 Real FaceAPI.js Emotion Recognition + Music AI</div>
+            <p>Professional-grade emotion detection using pre-trained models with personalized music recommendations</p>
         </div>
 
         <div class="main-grid">
@@ -440,7 +431,7 @@
                 
                 <div id="status" class="status-indicator status-loading">
                     <div class="loading-spinner"></div>
-                    <span>Loading AI models...</span>
+                    <span>Loading FaceAPI.js models...</span>
                 </div>
 
                 <div class="detection-stats">
@@ -489,7 +480,7 @@
 
                 <div id="recommendationsList">
                     <div style="text-align: center; color: #666; padding: 20px;">
-                        Connect your accounts and start emotion detection to get personalized recommendations
+                        Start emotion detection to get personalized music recommendations
                     </div>
                 </div>
             </div>
@@ -505,45 +496,38 @@
                 </div>
                 <div class="insight-card">
                     <div class="insight-title">🎵 Music Personality</div>
-                    <div id="musicPersonality">Connect Spotify to analyze your music taste</div>
+                    <div id="musicPersonality">Start analysis to understand your music taste</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-title">💡 Mood Recommendation</div>
                     <div id="moodRecommendation">AI will suggest activities based on your mood</div>
                 </div>
                 <div class="insight-card">
-                    <div class="insight-title">📈 Mood Tracking</div>
-                    <div id="moodTracking">Long-term mood analysis coming soon</div>
+                    <div class="insight-title">📈 Real-time Analysis</div>
+                    <div id="moodTracking">Using pre-trained FaceAPI.js emotion models</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Hidden canvas for face cropping -->
-    <canvas id="faceCanvas" class="face-crop" width="48" height="48"></canvas>
-
     <script>
         // Global variables
-        let blazeFaceModel = null;
-        let emotionModel = null;
         let isRunning = false;
         let emotionHistory = [];
         let frameCount = 0;
         let lastTime = performance.now();
         let currentEmotion = 'neutral';
-        let spotifyAccessToken = null;
         let currentPlatform = 'spotify';
 
-        // Emotion configuration
-        const EMOTIONS = ['angry', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral'];
+        // FaceAPI.js emotion mapping
         const EMOTION_CONFIG = {
-            'angry': { emoji: '😠', color: '#e74c3c' },
-            'disgusted': { emoji: '🤢', color: '#1abc9c' },
-            'fearful': { emoji: '😨', color: '#9b59b6' },
+            'neutral': { emoji: '😐', color: '#95a5a6' },
             'happy': { emoji: '😊', color: '#f39c12' },
             'sad': { emoji: '😢', color: '#3498db' },
-            'surprised': { emoji: '😲', color: '#e67e22' },
-            'neutral': { emoji: '😐', color: '#95a5a6' }
+            'angry': { emoji: '😠', color: '#e74c3c' },
+            'fearful': { emoji: '😨', color: '#9b59b6' },
+            'disgusted': { emoji: '🤢', color: '#1abc9c' },
+            'surprised': { emoji: '😲', color: '#e67e22' }
         };
 
         // Music recommendations database by mood
@@ -658,271 +642,65 @@
         // Initialize the application
         async function initializeApp() {
             try {
-                console.log('Loading BlazeFace and emotion models...');
-                updateStatus('Loading AI models for emotion detection...', 'loading');
+                console.log('Loading FaceAPI.js models...');
+                updateStatus('Loading pre-trained emotion recognition models...', 'loading');
                 
-                // Load BlazeFace
-                blazeFaceModel = await blazeface.load();
-                console.log('BlazeFace loaded successfully');
+                // Load FaceAPI.js models from CDN
+                const MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+                
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                ]);
 
-                // Create emotion model
-                await createEmotionModel();
-                
                 // Initialize UI
                 initializeEmotionGrid();
 
-                updateStatus('✅ AI models ready! Start analysis to get music recommendations.', 'active');
+                updateStatus('✅ FaceAPI.js models loaded! Ready for real emotion recognition.', 'active');
+                console.log('FaceAPI.js models loaded successfully');
                 
             } catch (error) {
                 console.error('Initialization error:', error);
-                updateStatus('❌ Error loading models. Some features may not work.', 'error');
+                updateStatus('❌ Error loading models. Please refresh and try again.', 'error');
             }
         }
 
-        // Create emotion recognition model (same as before)
-        async function createEmotionModel() {
-            console.log('Creating emotion recognition model...');
-            
-            emotionModel = tf.sequential({
-                layers: [
-                    tf.layers.conv2d({
-                        inputShape: [48, 48, 1],
-                        filters: 32,
-                        kernelSize: 3,
-                        activation: 'relu',
-                        padding: 'same',
-                        kernelInitializer: 'heUniform'
-                    }),
-                    tf.layers.batchNormalization(),
-                    tf.layers.maxPooling2d({poolSize: 2}),
-                    tf.layers.dropout({rate: 0.25}),
-
-                    tf.layers.conv2d({
-                        filters: 64,
-                        kernelSize: 3,
-                        activation: 'relu',
-                        padding: 'same'
-                    }),
-                    tf.layers.batchNormalization(),
-                    tf.layers.maxPooling2d({poolSize: 2}),
-                    tf.layers.dropout({rate: 0.25}),
-
-                    tf.layers.flatten(),
-                    tf.layers.dense({
-                        units: 512,
-                        activation: 'relu',
-                        kernelInitializer: 'heUniform'
-                    }),
-                    tf.layers.dropout({rate: 0.5}),
-                    
-                    tf.layers.dense({
-                        units: 7,
-                        activation: 'softmax'
-                    })
-                ]
-            });
-
-            emotionModel.compile({
-                optimizer: tf.train.adam(0.0001),
-                loss: 'categoricalCrossentropy',
-                metrics: ['accuracy']
-            });
-
-            // Quick training with emotion patterns
-            await trainEmotionModel();
-            console.log('Emotion model ready');
-        }
-
-        // Skip training - use real-time facial feature analysis instead
-        async function trainEmotionModel() {
-            console.log('Using real-time facial feature analysis instead of pre-training');
-            // No training needed - we'll analyze actual facial features
-        }
-
-        // Analyze real facial features from the actual face crop
-        function analyzeRealFacialFeatures(imageData) {
-            const width = 48;
-            const height = 48;
-            const data = new Uint8Array(imageData.data);
-            
-            // Extract real facial features
-            const features = {
-                // Mouth region analysis (bottom third of face)
-                mouthOpen: 0,
-                mouthCurve: 0,
-                
-                // Eye region analysis (upper third)
-                eyeOpen: 0,
-                eyebrowHeight: 0,
-                
-                // Overall face analysis
-                faceSymmetry: 0,
-                intensity: 0
-            };
-            
-            // Analyze mouth region (y: 32-48, center around x: 24)
-            let mouthBrightness = 0;
-            let mouthPixels = 0;
-            let leftMouth = 0, rightMouth = 0, centerMouth = 0;
-            
-            for (let y = 32; y < 48; y++) {
-                for (let x = 12; x < 36; x++) {
-                    const i = (y * width + x) * 4;
-                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    mouthBrightness += brightness;
-                    mouthPixels++;
-                    
-                    if (x < 20) leftMouth += brightness;
-                    else if (x > 28) rightMouth += brightness;
-                    else centerMouth += brightness;
-                }
-            }
-            
-            features.mouthOpen = mouthBrightness / mouthPixels / 255;
-            features.mouthCurve = (leftMouth + rightMouth - 2 * centerMouth) / mouthPixels;
-            
-            // Analyze eye region (y: 8-24)
-            let eyeBrightness = 0;
-            let eyePixels = 0;
-            let browBrightness = 0;
-            let browPixels = 0;
-            
-            for (let y = 12; y < 24; y++) {
-                for (let x = 8; x < 40; x++) {
-                    const i = (y * width + x) * 4;
-                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    eyeBrightness += brightness;
-                    eyePixels++;
-                }
-            }
-            
-            for (let y = 8; y < 16; y++) {
-                for (let x = 12; x < 36; x++) {
-                    const i = (y * width + x) * 4;
-                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    browBrightness += brightness;
-                    browPixels++;
-                }
-            }
-            
-            features.eyeOpen = eyeBrightness / eyePixels / 255;
-            features.eyebrowHeight = browBrightness / browPixels / 255;
-            
-            // Calculate symmetry (left vs right side)
-            let leftSide = 0, rightSide = 0;
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width/2; x++) {
-                    const iLeft = (y * width + x) * 4;
-                    const iRight = (y * width + (width - 1 - x)) * 4;
-                    leftSide += (data[iLeft] + data[iLeft + 1] + data[iLeft + 2]) / 3;
-                    rightSide += (data[iRight] + data[iRight + 1] + data[iRight + 2]) / 3;
-                }
-            }
-            features.faceSymmetry = 1 - Math.abs(leftSide - rightSide) / Math.max(leftSide, rightSide);
-            
-            // Overall intensity
-            features.intensity = (eyeBrightness + mouthBrightness) / (eyePixels + mouthPixels) / 255;
-            
-            return features;
-        }
-
-        // Convert facial features to emotion probabilities
-        function featurestoEmotions(features) {
-            const emotions = {};
-            
-            // Happy detection: mouth curve up, eyes slightly closed (smile), good symmetry
-            emotions.happy = Math.max(0, (
-                features.mouthCurve * 0.4 +  // Smile curve
-                (0.8 - features.eyeOpen) * 0.3 +  // Eyes squint when smiling
-                features.faceSymmetry * 0.2 +
-                features.intensity * 0.1
-            ));
-            
-            // Sad detection: mouth curve down, droopy features, low intensity
-            emotions.sad = Math.max(0, (
-                (-features.mouthCurve) * 0.4 +  // Frown
-                (1 - features.intensity) * 0.3 +  // Low energy
-                (1 - features.eyebrowHeight) * 0.2 +  // Droopy brows
-                (1 - features.mouthOpen) * 0.1  // Closed mouth
-            ));
-            
-            // Surprised detection: wide eyes, open mouth, high intensity
-            emotions.surprised = Math.max(0, (
-                features.eyeOpen * 0.4 +  // Wide eyes
-                features.mouthOpen * 0.3 +  // Open mouth
-                features.intensity * 0.2 +
-                features.eyebrowHeight * 0.1  // Raised brows
-            ));
-            
-            // Angry detection: low brows, tight mouth, asymmetry
-            emotions.angry = Math.max(0, (
-                (1 - features.eyebrowHeight) * 0.4 +  // Furrowed brow
-                (1 - features.mouthOpen) * 0.3 +  // Tight mouth
-                (1 - features.faceSymmetry) * 0.2 +  // Tension
-                features.intensity * 0.1
-            ));
-            
-            // Fearful detection: wide eyes, slightly open mouth, high brows
-            emotions.fearful = Math.max(0, (
-                features.eyeOpen * 0.3 +  // Wide eyes
-                features.eyebrowHeight * 0.3 +  // Raised brows
-                features.mouthOpen * 0.2 +  // Slightly open mouth
-                (1 - features.faceSymmetry) * 0.2  // Tension
-            ));
-            
-            // Disgusted detection: asymmetric mouth, nose wrinkle (center distortion)
-            emotions.disgusted = Math.max(0, (
-                (1 - features.faceSymmetry) * 0.4 +
-                (-features.mouthCurve * 0.5) * 0.3 +  // Downturned
-                (1 - features.mouthOpen) * 0.2 +
-                (1 - features.intensity) * 0.1
-            ));
-            
-            // Neutral: balanced features, moderate values
-            emotions.neutral = Math.max(0, (
-                features.faceSymmetry * 0.3 +
-                (0.5 - Math.abs(features.mouthCurve)) * 0.3 +  // Neutral mouth
-                (0.5 - Math.abs(features.eyeOpen - 0.5)) * 0.2 +  // Normal eyes
-                (0.5 - Math.abs(features.intensity - 0.5)) * 0.2  // Normal intensity
-            ));
-            
-            // Normalize probabilities
-            const total = Object.values(emotions).reduce((sum, val) => sum + val, 0);
-            if (total > 0) {
-                Object.keys(emotions).forEach(emotion => {
-                    emotions[emotion] = emotions[emotion] / total;
-                });
-            } else {
-                // Fallback to neutral if no features detected
-                emotions.neutral = 1.0;
-                EMOTIONS.forEach(emotion => {
-                    if (emotion !== 'neutral') emotions[emotion] = 0;
-                });
-            }
-            
-            return emotions;
-        }
-
-        // Main detection loop
-        async function detectFacesAndEmotions() {
-            if (!isRunning || !blazeFaceModel || !emotionModel) return;
+        // Main detection loop using FaceAPI.js
+        async function detectEmotions() {
+            if (!isRunning) return;
 
             const webcam = document.getElementById('webcam');
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             
+            // Set canvas size to match video
             canvas.width = webcam.videoWidth;
             canvas.height = webcam.videoHeight;
+            
+            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             try {
-                const faces = await blazeFaceModel.estimateFaces(webcam, false);
+                // Detect faces and expressions using FaceAPI.js
+                const detections = await faceapi
+                    .detectAllFaces(webcam, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceExpressions();
                 
-                if (faces.length > 0) {
-                    const face = faces[0];
-                    drawFaceBoundingBox(ctx, face);
-                    await analyzeFaceEmotion(webcam, face);
-                    updateStats(faces.length, face.probability || 0.95);
+                if (detections.length > 0) {
+                    const detection = detections[0];
+                    
+                    // Draw face detection box
+                    drawFaceBoundingBox(ctx, detection);
+                    
+                    // Get emotion predictions from FaceAPI.js
+                    const emotions = detection.expressions;
+                    
+                    // Update UI with real emotion data
+                    updateEmotionDisplay(emotions);
+                    recordEmotionHistory(emotions);
+                    
+                    // Update stats
+                    updateStats(detections.length, detection.detection.score);
                 } else {
                     updateStats(0, 0);
                 }
@@ -933,99 +711,36 @@
             
             updateFPS();
             
+            // Continue detection loop
             if (isRunning) {
-                requestAnimationFrame(detectFacesAndEmotions);
+                requestAnimationFrame(detectEmotions);
             }
         }
 
         // Draw face bounding box
-        function drawFaceBoundingBox(ctx, face) {
-            const [x1, y1] = face.topLeft;
-            const [x2, y2] = face.bottomRight;
-            const width = x2 - x1;
-            const height = y2 - y1;
+        function drawFaceBoundingBox(ctx, detection) {
+            const box = detection.detection.box;
             
             // Draw bounding box
             ctx.strokeStyle = '#00FF00';
             ctx.lineWidth = 3;
-            ctx.strokeRect(x1, y1, width, height);
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
             
             // Draw confidence
             ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
-            ctx.fillRect(x1, y1 - 25, width, 20);
+            ctx.fillRect(box.x, box.y - 25, box.width, 20);
             
             ctx.fillStyle = 'white';
             ctx.font = '12px Arial';
             ctx.textAlign = 'center';
-            const confidence = face.probability || 0.95;
             ctx.fillText(
-                `Face ${(confidence * 100).toFixed(1)}%`,
-                x1 + width / 2,
-                y1 - 10
+                `Face ${(detection.detection.score * 100).toFixed(1)}%`,
+                box.x + box.width / 2,
+                box.y - 10
             );
         }
 
-        // Analyze face emotion using REAL facial feature analysis
-        async function analyzeFaceEmotion(video, face) {
-            try {
-                const [x1, y1] = face.topLeft;
-                const [x2, y2] = face.bottomRight;
-                const width = x2 - x1;
-                const height = y2 - y1;
-                
-                // Add padding to face crop for better analysis
-                const padding = 0.2;
-                const paddedX = Math.max(0, x1 - width * padding);
-                const paddedY = Math.max(0, y1 - height * padding);
-                const paddedWidth = Math.min(video.videoWidth - paddedX, width * (1 + 2 * padding));
-                const paddedHeight = Math.min(video.videoHeight - paddedY, height * (1 + 2 * padding));
-                
-                // Extract face region to 48x48 canvas
-                const faceCanvas = document.getElementById('faceCanvas');
-                const faceCtx = faceCanvas.getContext('2d');
-                
-                // Clear and draw face
-                faceCtx.fillStyle = '#000';
-                faceCtx.fillRect(0, 0, 48, 48);
-                faceCtx.drawImage(
-                    video, 
-                    paddedX, paddedY, paddedWidth, paddedHeight,
-                    0, 0, 48, 48
-                );
-                
-                // Get image data for analysis
-                const imageData = faceCtx.getImageData(0, 0, 48, 48);
-                
-                // Analyze REAL facial features from the actual image
-                const facialFeatures = analyzeRealFacialFeatures(imageData);
-                
-                // Convert features to emotion probabilities
-                const emotionResults = featurestoEmotions(facialFeatures);
-                
-                // Add some temporal smoothing to reduce jitter
-                if (window.lastEmotions) {
-                    const smoothing = 0.7; // How much to blend with previous frame
-                    Object.keys(emotionResults).forEach(emotion => {
-                        emotionResults[emotion] = smoothing * (window.lastEmotions[emotion] || 0) + 
-                                                (1 - smoothing) * emotionResults[emotion];
-                    });
-                }
-                window.lastEmotions = {...emotionResults};
-                
-                // Update UI and get recommendations
-                updateEmotionDisplay(emotionResults);
-                recordEmotionHistory(emotionResults);
-                
-                // Debug: log features for testing
-                console.log('Facial features:', facialFeatures);
-                console.log('Emotion results:', emotionResults);
-                
-            } catch (error) {
-                console.error('Emotion analysis error:', error);
-            }
-        }
-
-        // Update emotion display
+        // Update emotion display with FaceAPI.js results
         function updateEmotionDisplay(emotions) {
             let dominantEmotion = '';
             let maxConfidence = 0;
@@ -1110,7 +825,6 @@
             document.getElementById('emotionPattern').textContent = insights.pattern;
             document.getElementById('musicPersonality').textContent = insights.musicPersonality;
             document.getElementById('moodRecommendation').textContent = insights.recommendation;
-            document.getElementById('moodTracking').textContent = insights.tracking;
         }
 
         // Get mood insights based on emotion
@@ -1119,44 +833,37 @@
                 'happy': {
                     pattern: 'You\'re in a great mood! High energy and positivity detected.',
                     musicPersonality: 'You enjoy upbeat, energetic music that matches your vibe.',
-                    recommendation: 'Perfect time for social activities, creative work, or exercise!',
-                    tracking: 'Happy moments detected - keep doing what you\'re doing!'
+                    recommendation: 'Perfect time for social activities, creative work, or exercise!'
                 },
                 'sad': {
                     pattern: 'Feeling down right now. Low energy and melancholy detected.',
                     musicPersonality: 'You prefer slower, emotional music that resonates with your feelings.',
-                    recommendation: 'Consider gentle activities like reading, meditation, or calling a friend.',
-                    tracking: 'It\'s okay to feel sad sometimes. This too shall pass.'
+                    recommendation: 'Consider gentle activities like reading, meditation, or calling a friend.'
                 },
                 'angry': {
                     pattern: 'High intensity emotions detected. You seem frustrated or angry.',
                     musicPersonality: 'You might enjoy intense, aggressive music to channel energy.',
-                    recommendation: 'Try physical exercise, deep breathing, or expressing yourself creatively.',
-                    tracking: 'Channel this energy positively - workout or creative expression recommended.'
+                    recommendation: 'Try physical exercise, deep breathing, or expressing yourself creatively.'
                 },
                 'surprised': {
                     pattern: 'Something unexpected caught your attention! High alertness detected.',
                     musicPersonality: 'You\'re open to experimental and unique musical experiences.',
-                    recommendation: 'Great time to try something new or explore unfamiliar territory.',
-                    tracking: 'Surprise emotions often lead to memorable experiences!'
+                    recommendation: 'Great time to try something new or explore unfamiliar territory.'
                 },
                 'fearful': {
                     pattern: 'Anxiety or worry detected. You might be feeling uncertain.',
                     musicPersonality: 'Calming, soothing music helps you feel more secure.',
-                    recommendation: 'Take some deep breaths, try relaxation techniques, or seek comfort.',
-                    tracking: 'Remember: you\'re stronger than your fears. Consider talking to someone.'
+                    recommendation: 'Take some deep breaths, try relaxation techniques, or seek comfort.'
                 },
                 'disgusted': {
                     pattern: 'Strong negative reaction detected. Something is bothering you.',
                     musicPersonality: 'You might prefer darker or more alternative music right now.',
-                    recommendation: 'Distance yourself from whatever\'s causing this feeling.',
-                    tracking: 'Trust your instincts - if something feels wrong, it probably is.'
+                    recommendation: 'Distance yourself from whatever\'s causing this feeling.'
                 },
                 'neutral': {
                     pattern: 'Calm and balanced emotional state. You\'re feeling stable.',
                     musicPersonality: 'You enjoy a wide variety of music and are open to suggestions.',
-                    recommendation: 'Good time for focused work, learning, or planning.',
-                    tracking: 'Balanced mood detected - perfect for productivity and decision-making.'
+                    recommendation: 'Good time for focused work, learning, or planning.'
                 }
             };
             
@@ -1186,8 +893,7 @@
             const grid = document.getElementById('emotionGrid');
             grid.innerHTML = '';
             
-            EMOTIONS.forEach(emotion => {
-                const config = EMOTION_CONFIG[emotion];
+            Object.entries(EMOTION_CONFIG).forEach(([emotion, config]) => {
                 const card = document.createElement('div');
                 card.className = 'emotion-card';
                 card.id = `${emotion}-card`;
@@ -1224,11 +930,6 @@
 
         // Start camera and analysis
         async function startAnalysis() {
-            if (!blazeFaceModel || !emotionModel) {
-                alert('AI models not loaded yet. Please wait for initialization.');
-                return;
-            }
-
             try {
                 const webcam = document.getElementById('webcam');
                 
@@ -1254,9 +955,10 @@
                 document.getElementById('stopBtn').disabled = false;
                 document.getElementById('syncBtn').disabled = false;
                 
-                updateStatus('🎯 Analyzing your mood for personalized music recommendations...', 'active');
+                updateStatus('🎯 Real-time emotion analysis active using FaceAPI.js!', 'active');
                 
-                detectFacesAndEmotions();
+                // Start detection loop
+                detectEmotions();
                 
             } catch (error) {
                 console.error('Camera start error:', error);
@@ -1283,27 +985,17 @@
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            updateStatus('✅ Analysis stopped. Start again to get new recommendations.', 'loading');
+            updateStatus('✅ Analysis stopped. Models remain loaded for quick restart.', 'loading');
         }
 
         // Connect to Spotify
         function connectSpotify() {
-            // Spotify OAuth flow (simplified for demo)
-            const clientId = 'your_spotify_client_id'; // You'd need to register an app
-            const redirectUri = encodeURIComponent(window.location.origin);
-            const scopes = encodeURIComponent('user-read-private user-read-email playlist-read-private user-top-read');
-            
-            // In a real implementation, you'd redirect to Spotify OAuth
             alert(`🎧 Spotify Integration Demo\n\nIn a real implementation, this would:\n1. Redirect to Spotify OAuth\n2. Get your listening history\n3. Analyze your music preferences\n4. Provide personalized recommendations\n\nFor now, showing demo recommendations based on your detected mood: ${currentEmotion}`);
             
-            // Simulate successful connection
             document.getElementById('spotifyConnect').textContent = '✅ Connected to Spotify';
             document.getElementById('spotifyConnect').disabled = true;
             
-            // Update music personality insight
-            document.getElementById('musicPersonality').textContent = 'Connected! Analyzing your Spotify listening patterns...';
-            
-            // Update recommendations with "personalized" touch
+            document.getElementById('musicPersonality').textContent = 'Connected! Analyzing your Spotify listening patterns with real emotion data...';
             updateMusicRecommendations(currentEmotion);
         }
 
@@ -1311,13 +1003,11 @@
         function switchPlatform(platform) {
             currentPlatform = platform;
             
-            // Update tab styling
             document.querySelectorAll('.platform-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             document.querySelector(`[data-platform="${platform}"]`).classList.add('active');
             
-            // Update recommendations
             updateMusicRecommendations(currentEmotion);
         }
 
@@ -1340,7 +1030,7 @@
             const recommendations = MUSIC_RECOMMENDATIONS[currentEmotion] || MUSIC_RECOMMENDATIONS['neutral'];
             const tracks = recommendations[currentPlatform] || [];
             
-            alert(`🎵 MoodSync Playlist Created!\n\nBased on your current mood: ${currentEmotion.toUpperCase()}\n\nPlaylist includes ${tracks.length} tracks:\n${tracks.slice(0, 3).map(t => `• ${t.name} - ${t.artist}`).join('\n')}\n\nIn a real implementation, this would create a playlist in your ${currentPlatform === 'spotify' ? 'Spotify' : 'YouTube'} account.`);
+            alert(`🎵 MoodSync Playlist Created!\n\nBased on your current mood: ${currentEmotion.toUpperCase()}\n\nPlaylist includes ${tracks.length} tracks:\n${tracks.slice(0, 3).map(t => `• ${t.name} - ${t.artist}`).join('\n')}\n\nIn a real implementation, this would create a playlist in your ${currentPlatform === 'spotify' ? 'Spotify' : 'YouTube'} account using the real emotion data from FaceAPI.js.`);
         }
 
         // Update status display
@@ -1354,9 +1044,9 @@
 
         // Initialize app on load
         window.addEventListener('load', async () => {
-            console.log('Initializing MoodSync Music Recommendation System...');
+            console.log('Initializing MoodSync with professional FaceAPI.js...');
             await initializeApp();
-            console.log('MoodSync ready for emotion-based music recommendations!');
+            console.log('MoodSync ready for real emotion-based music recommendations!');
         });
         
         // Cleanup on unload
