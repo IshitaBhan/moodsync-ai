@@ -894,9 +894,21 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🎵 MoodSync Pro initializing...');
             
-            // Force remove any stuck modals
-            setTimeout(forceCloseModals, 100);
-            setTimeout(forceCloseModals, 500);
+            // FORCE REMOVE ALL MODALS IMMEDIATELY
+            setTimeout(() => {
+                // Remove all possible modal elements
+                document.querySelectorAll('div').forEach(div => {
+                    if (div.innerHTML && (
+                        div.innerHTML.includes('AI Emotion Calibration') ||
+                        div.innerHTML.includes('Start Calibration') ||
+                        div.innerHTML.includes('skipCalibration') ||
+                        div.style.position === 'fixed'
+                    )) {
+                        console.log('Removing modal:', div);
+                        div.remove();
+                    }
+                });
+            }, 50);
             
             // Check for Spotify auth code
             checkSpotifyAuth();
@@ -1320,6 +1332,7 @@
         function startFallbackDetection() {
             console.log('🎭 Starting intelligent emotion detection');
             
+            // NO CALIBRATION MODAL - just start detection immediately
             let previousFrame = null;
             let currentEmotionState = 'neutral';
             let emotionConfidence = 0.7;
@@ -1346,7 +1359,7 @@
                 setTimeout(analyzeVideoFrame, 800); // Smooth updates
             };
             
-            // Start analysis
+            // Start analysis immediately - no modal
             analyzeVideoFrame();
         }
         
