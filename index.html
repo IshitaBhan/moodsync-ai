@@ -2340,36 +2340,220 @@ To fix the "Invalid redirect URI" error:
             await spotifyPlayer.previousTrack();
         }
 
-        // Initialize app
+        // Optimized FaceAPI model loading with multiple fallbacks
         async function initializeApp() {
             try {
                 console.log('Loading FaceAPI.js models...');
-                updateStatus('🔄 Loading pre-trained emotion recognition models...', 'loading');
+                updateStatus('🔄 Loading AI models (trying fastest option)...', 'loading');
                 
-                let MODEL_URL = 'https://vladmandic.github.io/face-api/model';
+                // Try multiple CDN sources in order of speed/reliability
+                const MODEL_SOURCES = [
+                    {
+                        url: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model',
+                        name: 'vladmandic (optimized)',
+                        models: ['tinyFaceDetector', 'faceExpressionNet']
+                    },
+                    {
+                        url: 'https://unpkg.com/@vladmandic/face-api@1.7.13/model', 
+                        name: 'unpkg backup',
+                        models: ['tinyFaceDetector', 'faceExpressionNet']
+                    },
+                    {
+                        url: 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights',
+                        name: 'original face-api.js',
+                        models: ['tinyFaceDetector', 'faceExpressionNet']
+                    }
+                ];
+
+                let modelsLoaded = false;
+                let attemptCount = 0;
+
+                for (const source of MODEL_SOURCES) {
+                    attemptCount++;
+                    try {
+                        updateStatus(`🔄 Trying ${source.name} (${attemptCount}/${MODEL_SOURCES.length})...`, 'loading');
+                        console.log(`Attempting to load from: ${source.name}`);
+                        
+                        // Set timeout for each attempt
+                        const loadPromise = Promise.all([
+                            faceapi.nets.tinyFaceDetector.loadFromUri(source.url),
+                            faceapi.nets.faceExpressionNet.loadFromUri(source.url)
+                        ]);
+
+                        // Add 15-second timeout per attempt
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Timeout')), 15000);
+                        });
+
+                        await Promise.race([loadPromise, timeoutPromise]);
+                        
+                        modelsLoaded = true;
+                        console.log(`✅ Models loaded successfully from ${source.name}`);
+                        break;
+                        
+                    } catch (error) {
+                        console.warn(`❌ Failed to load from ${source.name}:`, error.message);
+                        if (attemptCount < MODEL_SOURCES.length) {
+                            updateStatus(`⚠️ ${source.name} failed, trying next option...`, 'loading');
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay
+                        }
+                        continue;
+                    }
+                }
                 
-                try {
-                    await Promise.all([
-                        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-                    ]);
-                } catch (error) {
-                    console.warn('Primary CDN failed, trying fallback...');
-                    MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
-                    await Promise.all([
-                        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-                    ]);
+                if (!modelsLoaded) {
+                    throw new Error('All CDN sources failed');
                 }
 
                 initializeEmotionGrid();
                 document.getElementById('startBtn').disabled = false;
-                updateStatus('✅ FaceAPI.js models loaded! Ready for emotion recognition.', 'active');
+                updateStatus('✅ AI models loaded! Camera ready for emotion detection.', 'active');
                 console.log('FaceAPI.js models loaded successfully');
                 
+                // Show quick start tip
+                setTimeout(() => {
+                    if (!isRunning) {
+                        updateStatus('✅ Ready! Click "Start" to begin emotion detection.', 'active');
+                    }
+                }, 2000);
+                
             } catch (error) {
-                console.error('Initialization error:', error);
-                updateStatus('❌ Error loading models. Please refresh and try again.', 'error');
+                console.error('All model loading attempts failed:', error);
+                // Enable demo mode as fallback
+                enableDemoMode();
+            }
+        }
+
+        // Demo mode fallback when AI models fail to load
+        function enableDemoMode() {
+            updateStatus('🎭 Demo Mode: Click emotions to test music recommendations', 'active');
+            document.getElementById('startBtn').textContent = '🎭 Demo Mode';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').onclick = startDemoMode;
+            
+            // Show demo explanation
+            const demoExplanation = document.createElement('div');
+            demoExplanation.style.cssText = `
+                background: #fff3cd;
+                border: 1px solid #ffeaa7;
+                border-radius: 8px;
+                padding: 10px;
+                margin: 10px 0;
+                font-size: 0.9em;
+                text-align: center;
+            `;
+            demoExplanation.innerHTML = `
+                <strong>🎭 Demo Mode Enabled</strong><br>
+                AI models couldn't load. Click emotions below to test music recommendations!<br>
+                <small>Your music streaming will still work perfectly.</small>
+            `;
+            
+            const cameraSection = document.querySelector('.camera-section');
+            cameraSection.appendChild(demoExplanation);
+            
+            // Convert emotion grid to clickable demo
+            addEmotionSelector();
+        }
+
+        // Add manual emotion selector for demo mode
+        function addEmotionSelector() {
+            const emotionGrid = document.getElementById('emotionGrid');
+            emotionGrid.innerHTML = '';
+            
+            Object.entries(EMOTION_CONFIG).forEach(([emotion, config]) => {
+                const card = document.createElement('div');
+                card.className = 'emotion-card';
+                card.id = `${emotion}-card`;
+                card.style.cursor = 'pointer';
+                card.onclick = () => {
+                    // Update to selected emotion
+                    currentEmotion = emotion;
+                    
+                    // Clear all selections
+                    document.querySelectorAll('.emotion-card').forEach(c => c.classList.remove('dominant'));
+                    card.classList.add('dominant');
+                    
+                    // Update displays
+                    updateCurrentMoodDisplay(emotion, 0.95);
+                    updateMusicRecommendations(emotion);
+                    updateMoodInsights(emotion);
+                    
+                    // Enable sync button
+                    document.getElementById('syncBtn').disabled = false;
+                };
+                
+                card.innerHTML = `
+                    <div class="emotion-icon">${config.emoji}</div>
+                    <div class="emotion-name">${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</div>
+                    <div class="emotion-confidence">Click to select</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: 0%"></div>
+                    </div>
+                `;
+                
+                emotionGrid.appendChild(card);
+            });
+            
+            document.getElementById('currentMood').textContent = 'Click an emotion above to test music recommendations';
+        }
+
+        // Demo mode starter
+        function startDemoMode() {
+            updateStatus('🎭 Demo active! Click emotions above to test recommendations.', 'active');
+            document.getElementById('startBtn').textContent = '✅ Demo Active';
+            document.getElementById('startBtn').disabled = true;
+            
+            // Show initial recommendations
+            updateMusicRecommendations('happy');
+            currentEmotion = 'happy';
+            updateCurrentMoodDisplay('happy', 0.95);
+            
+            // Highlight happy emotion as example
+            setTimeout(() => {
+                const happyCard = document.getElementById('happy-card');
+                if (happyCard) {
+                    happyCard.classList.add('dominant');
+                    happyCard.querySelector('.confidence-fill').style.width = '95%';
+                }
+            }, 500);
+        }
+
+        // Add quick retry button for model loading
+        function addRetryButton() {
+            const retryBtn = document.createElement('button');
+            retryBtn.className = 'control-btn';
+            retryBtn.innerHTML = '🔄 Retry AI Models';
+            retryBtn.onclick = () => {
+                // Remove demo elements
+                const demoExplanation = document.querySelector('.camera-section div[style*="background: #fff3cd"]');
+                if (demoExplanation) demoExplanation.remove();
+                
+                // Reset start button
+                document.getElementById('startBtn').textContent = '📹 Start';
+                document.getElementById('startBtn').onclick = startAnalysis;
+                
+                // Retry loading
+                initializeApp();
+                retryBtn.remove();
+            };
+            
+            const controls = document.querySelector('.controls');
+            controls.appendChild(retryBtn);
+        }
+
+        // Enhanced error handling with user-friendly messages
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status-indicator status-${type}`;
+            
+            const spinner = type === 'loading' ? '<div class="loading-spinner"></div>' : '';
+            const icon = type === 'active' ? '✅' : type === 'error' ? '❌' : '';
+            
+            status.innerHTML = `${spinner}${icon} <span>${message}</span>`;
+            
+            // Add retry button on error
+            if (type === 'error' && !document.querySelector('button[onclick*="initializeApp"]')) {
+                setTimeout(addRetryButton, 1000);
             }
         }
 
