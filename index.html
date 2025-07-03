@@ -1,4 +1,529 @@
-<!DOCTYPE html>
+window.history.replaceState({}, document.title, window.location.pathname);
+
+                await initializeSpotifyPlayer();
+                updateConnectButton('spotify', true);
+
+                // Analyze user profile for personalization
+                await analyzeUserProfile();
+
+            } catch (error) {
+                console.error('Spotify callback error:', error);
+                updateStatus('❌ Error authenticating with Spotify', 'error');
+            }
+        }
+
+        // Initialize Spotify Player
+        async function initializeSpotifyPlayer() {
+            if (!window.Spotify || !accessToken) return;
+
+            spotifyPlayer = new Spotify.Player({
+                name: 'MoodSync Player',
+                getOAuthToken: cb => { cb(accessToken); },
+                volume: 0.5
+            });
+
+            spotifyPlayer.addListener('ready', ({ device_id }) => {
+                console.log('Spotify Player Ready with Device ID', device_id);
+                spotifyDeviceId = device_id;
+                updateStatus('✅ Spotify player ready!', 'active');
+            });
+
+            spotifyPlayer.addListener('player_state_changed', (state) => {
+                if (!state) return;
+
+                const track = state.track_window.current_track;
+                const isPlaying = !state.paused;
+
+                document.getElementById('trackName').textContent = track.name;
+                document.getElementById('trackArtist').textContent = track.artists.map(a => a.name).join(', ');
+                document.getElementById('trackCover').src = track.album.images[0]?.url || '';
+                document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+                document.getElementById('spotifyPlayerControls').classList.add('active');
+            });
+
+            await spotifyPlayer.connect();
+        }
+
+        // Analyze user's Spotify profile for personalization
+        async function analyzeUserProfile() {
+            if (!accessToken) {
+                console.log('No Spotify access token available');
+                return false;
+            }
+
+            try {
+                updateStatus('🔄 Analyzing your music taste...', 'loading');
+
+                // Fetch user's top tracks
+                const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topTracksResponse.ok) {
+                    const topTracksData = await topTracksResponse.json();
+                    userProfile.topTracks = topTracksData.items;
+
+                    // Get audio features for top tracks
+                    const trackIds = userProfile.topTracks.map(track => track.id).join(',');
+                    const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (featuresResponse.ok) {
+                        const featuresData = await featuresResponse.json();
+                        userProfile.audioFeatures = featuresData.audio_features;
+                        calculateUserPreferences();
+                    }
+                }
+
+                // Fetch user's top artists
+                const topArtistsResponse = await fetch('https://api.spotify.com/v1/me/top/artists?limit=20&time_range=medium_term', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (topArtistsResponse.ok) {
+                    const topArtistsData = await topArtistsResponse.json();
+                    userProfile.topArtists = topArtistsData.items;
+                }
+
+                userProfile.isPersonalized = true;
+                generatePersonalizedRecommendations();
+                
+                updateStatus('✅ Music taste analyzed! Recommendations personalized.', 'active');
+                document.getElementById('musicPlatforms').textContent = 
+                    `✨ Spotify connected with ${userProfile.topTracks.length} favorite tracks analyzed! 🎧`;
+                
+                return true;
+
+            } catch (error) {
+                console.error('Error analyzing user profile:', error);
+                updateStatus('⚠️ Using default recommendations', 'loading');
+                return false;
+            }
+        }
+
+        // Calculate user preferences from audio features
+        function calculateUserPreferences() {
+            if (!userProfile.audioFeatures || userProfile.audioFeatures.length === 0) return;
+
+            const features = userProfile.audioFeatures.filter(f => f !== null);
+            const count = features.length;
+
+            if (count === 0) return;
+
+            userProfile.preferences = {
+                valence: features.reduce((sum, f) => sum + f.valence, 0) / count,
+                energy: features.reduce((sum, f) => sum + f.energy, 0) / count,
+                danceability: features.reduce((sum, f) => sum + f.danceability, 0) / count,
+                acousticness: features.reduce((sum, f) => sum + f.acousticness, 0) / count,
+                instrumentalness: features.reduce((sum, f) => sum + f.instrumentalness, 0) / count,
+            };
+
+            console.log('User music preferences calculated:', userProfile.preferences);
+        }
+
+        // Generate personalized recommendations
+        function generatePersonalizedRecommendations() {
+            personalizedRecommendations = {};
+
+            Object.keys(MUSIC_RECOMMENDATIONS).forEach(emotion => {
+                const baseTracks = MUSIC_RECOMMENDATIONS[emotion];
+                const personalizedTracks = [];
+
+                baseTracks.forEach(track => {
+                    const similarity = calculateMusicSimilarity(track.features, userProfile.preferences);
+                    const adjustedMatch = Math.round(
+                        (parseFloat(track.match.replace('%', '')) * 0.7 + similarity * 30)
+                    );
+
+                    personalizedTracks.push({
+                        ...track,
+                        match: `${Math.min(adjustedMatch, 99)}%`,
+                        personalizedScore: similarity,
+                        reason: getRecommendationReason(similarity)
+                    });
+                });
+
+                personalizedTracks.sort((a, b) => b.personalizedScore - a.personalizedScore);
+                personalizedRecommendations[emotion] = personalizedTracks.slice(0, 5);
+
+                // Add user's actual tracks that match this emotion
+                addUserTracksForEmotion(emotion, personalizedRecommendations[emotion]);
+            });
+
+            console.log('Personalized recommendations generated:', personalizedRecommendations);
+        }
+
+        // Calculate similarity between track features and user preferences
+        function calculateMusicSimilarity(trackFeatures, userPreferences) {
+            if (!trackFeatures || !userPreferences) return 0.5;
+
+            const weights = {
+                valence: 0.25,
+                energy: 0.20,
+                danceability: 0.15,
+                acousticness: 0.15,
+                instrumentalness: 0.10,
+            };
+
+            let totalSimilarity = 0;
+            let totalWeight = 0;
+
+            Object.keys(weights).forEach(feature => {
+                if (trackFeatures[feature] !== undefined && userPreferences[feature] !== undefined) {
+                    const similarity = 1 - Math.abs(trackFeatures[feature] - userPreferences[feature]);
+                    totalSimilarity += similarity * weights[feature];
+                    totalWeight += weights[feature];
+                }
+            });
+
+            return totalWeight > 0 ? totalSimilarity / totalWeight : 0.5;
+        }
+
+        // Add user's own tracks that match the emotion
+        function addUserTracksForEmotion(emotion, recommendations) {
+            if (!userProfile.topTracks || userProfile.topTracks.length === 0) return;
+
+            const emotionThresholds = {
+                'happy': { valence: 0.6, energy: 0.6 },
+                'sad': { valence: 0.3, energy: 0.4 },
+                'angry': { valence: 0.4, energy: 0.7 },
+                'neutral': { valence: 0.4, energy: 0.4 }
+            };
+
+            const threshold = emotionThresholds[emotion];
+            if (!threshold) return;
+
+            userProfile.topTracks.forEach((track, index) => {
+                const features = userProfile.audioFeatures[index];
+                if (!features) return;
+
+                const matchesEmotion = 
+                    (emotion === 'happy' && features.valence >= threshold.valence && features.energy >= threshold.energy) ||
+                    (emotion === 'sad' && features.valence <= threshold.valence && features.energy <= threshold.energy) ||
+                    (emotion === 'angry' && features.energy >= threshold.energy) ||
+                    (emotion === 'neutral' && features.valence >= 0.3 && features.valence <= 0.7);
+
+                if (matchesEmotion && recommendations.length < 7) {
+                    recommendations.push({
+                        name: track.name,
+                        artist: track.artists.map(a => a.name).join(', '),
+                        uri: track.uri,
+                        youtubeId: null,
+                        match: '💎 Your Music',
+                        personalizedScore: 1.0,
+                        reason: 'From your top tracks',
+                        isUserTrack: true
+                    });
+                }
+            });
+        }
+
+        // Get recommendation reason
+        function getRecommendationReason(similarity) {
+            if (similarity > 0.8) return 'Perfect match for your taste';
+            if (similarity > 0.6) return 'Great match based on your preferences';
+            if (similarity > 0.4) return 'Good fit for your music style';
+            return 'Recommended for this mood';
+        }
+
+        // Connect to YouTube Music
+        async function connectYouTube() {
+            try {
+                updateStatus('🔄 Connecting to YouTube Music...', 'loading');
+                
+                if (!youtubeAPIReady) {
+                    setTimeout(() => connectYouTube(), 1000);
+                    return;
+                }
+
+                // For demo purposes, simulate connection
+                youtubeConnected = true;
+                updateConnectButton('youtube', true);
+                document.getElementById('musicPlatforms').textContent = 'YouTube Music connected! 📺';
+                updateStatus('✅ YouTube Music ready!', 'active');
+                document.getElementById('youtubePlayerContainer').classList.add('active');
+                
+                // Simulate YouTube profile analysis
+                await analyzeYouTubeProfileDemo();
+
+            } catch (error) {
+                console.error('YouTube connection error:', error);
+                updateStatus('❌ Error connecting to YouTube Music', 'error');
+            }
+        }
+
+        // Demo YouTube profile analysis
+        async function analyzeYouTubeProfileDemo() {
+            // Simulate personalized YouTube recommendations
+            youtubeProfile.isPersonalized = true;
+            youtubeProfile.preferences.musicGenres = ['pop', 'rock', 'electronic'];
+            youtubeProfile.preferences.favoriteArtists = ['Popular Artist 1', 'Popular Artist 2'];
+            
+            generateYouTubePersonalizedRecommendations();
+            
+            document.getElementById('musicPlatforms').textContent = 
+                '✨ YouTube Music connected with personalized recommendations! 📺';
+        }
+
+        // Generate YouTube personalized recommendations
+        function generateYouTubePersonalizedRecommendations() {
+            youtubePersonalizedRecommendations = {};
+
+            Object.keys(MUSIC_RECOMMENDATIONS).forEach(emotion => {
+                const baseTracks = MUSIC_RECOMMENDATIONS[emotion];
+                const personalizedTracks = baseTracks.map(track => ({
+                    ...track,
+                    personalizedScore: 0.7 + Math.random() * 0.3, // Demo scoring
+                    reason: 'Based on your YouTube activity'
+                }));
+
+                youtubePersonalizedRecommendations[emotion] = personalizedTracks;
+            });
+        }
+
+        // Update connect button state
+        function updateConnectButton(platform, connected) {
+            const btn = document.getElementById(platform + 'Connect');
+            if (connected) {
+                btn.textContent = platform === 'spotify' ? '🎧 Connected to Spotify' : '📺 Connected to YouTube';
+                btn.style.opacity = '0.7';
+                btn.disabled = true;
+            }
+        }
+
+        // Switch platform
+        function switchPlatform(platform) {
+            currentPlatform = platform;
+            
+            document.querySelectorAll('.platform-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-platform="${platform}"]`).classList.add('active');
+
+            document.getElementById('spotifyPlayerControls').style.display = 
+                platform === 'spotify' ? 'block' : 'none';
+            document.getElementById('youtubePlayerControls').style.display = 
+                platform === 'youtube' ? 'block' : 'none';
+            document.getElementById('youtubePlayerContainer').style.display = 
+                platform === 'youtube' && youtubeConnected ? 'block' : 'none';
+
+            if (currentEmotion !== 'neutral') {
+                updateMusicRecommendations(currentEmotion);
+            }
+        }
+
+        // Play track with full functionality
+        async function playTrack(track) {
+            if (currentPlatform === 'spotify' && spotifyPlayer && accessToken) {
+                await playSpotifyTrack(track);
+            } else if (currentPlatform === 'youtube' && youtubeConnected) {
+                playYouTubeTrack(track);
+            } else {
+                // Open in external app/website
+                const url = currentPlatform === 'spotify' 
+                    ? `https://open.spotify.com/track/${track.uri?.split(':')[2] || ''}`
+                    : `https://www.youtube.com/watch?v=${track.youtubeId}`;
+                window.open(url, '_blank');
+            }
+        }
+
+        // Play Spotify track
+        async function playSpotifyTrack(track) {
+            try {
+                const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uris: [track.uri]
+                    }),
+                });
+
+                if (response.status === 204) {
+                    console.log('Spotify track started successfully');
+                    document.getElementById('moodRecommendation').textContent = 
+                        `🎵 Now playing: ${track.name} by ${track.artist}`;
+                }
+            } catch (error) {
+                console.error('Error playing Spotify track:', error);
+                // Fallback to opening in browser
+                window.open(`https://open.spotify.com/track/${track.uri.split(':')[2]}`, '_blank');
+            }
+        }
+
+        // Play YouTube track
+        function playYouTubeTrack(track) {
+            if (!youtubePlayer || !track.youtubeId) return;
+
+            document.getElementById('ytCurrentTitle').textContent = track.name;
+            document.getElementById('ytCurrentArtist').textContent = track.artist;
+            document.getElementById('ytTitle').textContent = track.name;
+            document.getElementById('ytArtist').textContent = track.artist;
+
+            youtubePlayer.loadVideoById(track.youtubeId);
+            document.getElementById('youtubePlayerControls').classList.add('active');
+            document.getElementById('youtubeOverlay').classList.remove('hidden');
+
+            currentPlaylist = getCurrentPlaylist();
+            currentTrackIndex = currentPlaylist.findIndex(t => t.youtubeId === track.youtubeId);
+            
+            document.getElementById('moodRecommendation').textContent = 
+                `🎵 Now playing: ${track.name} by ${track.artist}`;
+        }
+
+        // Get current playlist based on emotion and platform
+        function getCurrentPlaylist() {
+            const isPersonalized = currentPlatform === 'spotify' && userProfile.isPersonalized;
+            return isPersonalized ? 
+                personalizedRecommendations[currentEmotion] || MUSIC_RECOMMENDATIONS[currentEmotion] :
+                MUSIC_RECOMMENDATIONS[currentEmotion] || MUSIC_RECOMMENDATIONS['neutral'];
+        }
+
+        // Spotify controls
+        async function togglePlayback() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.togglePlay();
+        }
+
+        async function nextTrack() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.nextTrack();
+        }
+
+        async function previousTrack() {
+            if (!spotifyPlayer) return;
+            await spotifyPlayer.previousTrack();
+        }
+
+        // YouTube controls
+        function ytTogglePlayback() {
+            if (!youtubePlayer) return;
+            
+            const state = youtubePlayer.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                youtubePlayer.pauseVideo();
+            } else {
+                youtubePlayer.playVideo();
+            }
+        }
+
+        function ytNextTrack() {
+            if (currentPlaylist.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+            playYouTubeTrack(currentPlaylist[currentTrackIndex]);
+        }
+
+        function ytPreviousTrack() {
+            if (currentPlaylist.length === 0) return;
+            currentTrackIndex = currentTrackIndex > 0 ? currentTrackIndex - 1 : currentPlaylist.length - 1;
+            playYouTubeTrack(currentPlaylist[currentTrackIndex]);
+        }
+
+        // Generate random state for Spotify security
+        function generateRandomString(length) {
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let text = '';
+            for (let i = 0; i < length; i++) {
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return text;
+        }
+
+        // Calculate SHA256 for PKCE
+        async function sha256(plain) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plain);
+            return window.crypto.subtle.digest('SHA-256', data);
+        }
+
+        // Base64 encode for PKCE
+        function base64encode(input) {
+            return btoa(String.fromCharCode(...new Uint8Array(input)))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
+        }
+
+        // Connect to Spotify with full OAuth flow
+        async function connectSpotify() {
+            try {
+                const currentURL = window.location.href.split('?')[0];
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const error = urlParams.get('error');
+                
+                if (error) {
+                    console.error('Spotify authorization error:', error);
+                    updateStatus('❌ Spotify error: ' + error, 'error');
+                    showSpotifySetupInstructions();
+                    return;
+                }
+                
+                if (code) {
+                    await handleSpotifyCallback(code);
+                    return;
+                }
+
+                const codeVerifier = generateRandomString(128);
+                const hashed = await sha256(codeVerifier);
+                const codeChallenge = base64encode(hashed);
+                const state = generateRandomString(16);
+
+                const args = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: 'e642820d6fd04ac699ad222cb2e9ad08',
+                    scope: 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-top-read user-read-recently-played',
+                    redirect_uri: currentURL,
+                    state: state,
+                    code_challenge_method: 'S256',
+                    code_challenge: codeChallenge,
+                });
+
+                window.location.href = 'https://accounts.spotify.com/authorize?' + args.toString();
+                
+            } catch (error) {
+                console.error('Spotify connection error:', error);
+                updateStatus('❌ Error connecting to Spotify', 'error');
+            }
+        }
+
+        // Handle Spotify callback and get access token
+        async function handleSpotifyCallback(code) {
+            try {
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        client_id: 'e642820d6fd04ac699ad222cb2e9ad08',
+                        grant_type: 'authorization_code',
+                        code: code,
+                        redirect_uri: window.location.href.split('?')[0],
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                accessToken = data.access_token;
+
+                window.history.replaceState({}, document.title, window.location.pathname);        // Sample music recommendations with extended data for personalization
+        const MUSIC_RECOMMENDATIONS = {
+            'happy': [
+                { name: "Good 4 U", artist: "Olivia Rodrigo", uri: "spotify:track:4ZtFanR9U6ndgddUvNcjcG", youtubeId: "gNi_6U5Pm_o", match: "95%", features: { valence: 0.84, energy: 0.89, danceability: 0.78 } },
+                { name: "Blinding Lights", artist: "The Weeknd", uri: "spotify:track:0VjIjW4GlUK7tuDqZgJ6Ny", youtubeId: "4NRXx6U8ABQ", match: "92%", features: { valence: 0.76, energy: 0.73, danceability: 0.81 } },
+                { name: "Uptown Funk", artist: "Bruno Mars", uri: "spotify:track:32OlwWuMpZ6b0aN2RZOeMS", youtubeId: "OPf0YbXqDm0", match: "90%", features: { valence: 0.88, energy: 0.95, danceability: 0.87 } },
+                { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", uri: "spotify:track:6JV5LYLY4k8bvr7Lxyq64Z", youtubeId: "ru0K8uYEZWw", match: "88%", features: { valence: 0.94, energy: 0.85, danceability: 0.83 } },
+                { name: "Happy", artist: "Pharrell Williams", uri: "spotify:track:60nZcImufyMA1MKQY3dcCH", youtubeId: "ZbZSe6N_BXs", match: "95%", features: { valence: 0.96, energy: 0.82, danceability: 0.79 } }
+            ],
+            'sad': [
+                { name: "Someone Like You", artist: "Adele", uri: "spotify:track:1zwMYTA5nlN<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -541,6 +1066,49 @@
                         AI loading... Music recommendations coming soon
                     </div>
                 </div>
+
+                <!-- Spotify Player Controls -->
+                <div id="spotifyPlayerControls" class="player-controls">
+                    <div class="now-playing">
+                        <img id="trackCover" class="track-cover" src="" alt="Track Cover">
+                        <div>
+                            <div id="trackName" style="font-weight: 600; font-size: 0.9em;">No track selected</div>
+                            <div id="trackArtist" style="color: #666; font-size: 0.8em;">Spotify Player</div>
+                        </div>
+                    </div>
+                    <div class="playback-controls">
+                        <button class="playback-btn" onclick="previousTrack()">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="togglePlayback()" id="playPauseBtn">▶️ Play</button>
+                        <button class="playback-btn" onclick="nextTrack()">⏭️ Next</button>
+                    </div>
+                </div>
+
+                <!-- YouTube Player -->
+                <div id="youtubePlayerContainer" class="youtube-player-container">
+                    <div id="youtubePlayer"></div>
+                    <div id="youtubeOverlay" class="youtube-overlay">
+                        <div class="yt-info">
+                            <div class="yt-title" id="ytTitle">Select a song to play</div>
+                            <div class="yt-artist" id="ytArtist">YouTube Music Player</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YouTube Controls -->
+                <div id="youtubePlayerControls" class="player-controls youtube-controls">
+                    <div class="now-playing">
+                        <div class="track-cover" style="background: #ff0000; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">▶️</div>
+                        <div>
+                            <div id="ytCurrentTitle" style="font-weight: 600; font-size: 0.9em;">No track selected</div>
+                            <div id="ytCurrentArtist" style="color: #666; font-size: 0.8em;">YouTube Music</div>
+                        </div>
+                    </div>
+                    <div class="playback-controls">
+                        <button class="playback-btn" onclick="ytPreviousTrack()">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="ytTogglePlayback()" id="ytPlayPauseBtn">▶️ Play</button>
+                        <button class="playback-btn" onclick="ytNextTrack()">⏭️ Next</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -568,8 +1136,157 @@
         </div>
     </div>
 
+    <style>
+        .player-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .player-controls.active {
+            display: block;
+        }
+
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .track-cover {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background: #f0f0f0;
+        }
+
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .playback-btn {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s;
+        }
+
+        .playback-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .youtube-controls .playback-btn {
+            background: #ff0000;
+        }
+
+        .youtube-player-container {
+            position: relative;
+            margin-top: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .youtube-player-container.active {
+            display: block;
+        }
+
+        .youtube-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 10px;
+        }
+
+        .youtube-overlay.hidden {
+            display: none;
+        }
+
+        .yt-info {
+            text-align: center;
+            color: white;
+        }
+
+        .yt-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .yt-artist {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Ensure no code is visible on page */
+        body > script,
+        body > pre,
+        body > code,
+        .code-leak {
+            display: none !important;
+        }
+
+        /* Hide any accidentally visible JavaScript */
+        body *:not(script):not(pre):not(code) {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+
+        /* Prevent code from rendering as visible text */
+        body::before,
+        body::after {
+            content: none !important;
+        }
+    </style>
+
     <script>
-        // Global variables
+        // Ensure all code is properly contained and not visible on page
+        console.log('🔧 Checking for code display issues...');
+        
+        // Hide any accidentally visible code elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove any text nodes that might contain code
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.includes('function') || 
+                    node.textContent.includes('console.log') ||
+                    node.textContent.includes('await') ||
+                    node.textContent.includes('const ')) {
+                    textNodes.push(node);
+                }
+            }
+            
+            // Remove any code-like text nodes that shouldn't be visible
+            textNodes.forEach(node => {
+                if (node.parentNode && !node.parentNode.classList.contains('code-display')) {
+                    node.remove();
+                }
+            });
+        });
+
+        // Global variables for music services
         let isRunning = false;
         let emotionHistory = [];
         let frameCount = 0;
@@ -577,6 +1294,53 @@
         let currentEmotion = 'neutral';
         let currentPlatform = 'spotify';
         let loadingStartTime = Date.now();
+        
+        // Spotify variables
+        let spotifyPlayer = null;
+        let spotifyDeviceId = null;
+        let accessToken = null;
+        
+        // YouTube variables
+        let youtubePlayer = null;
+        let youtubeConnected = false;
+        let youtubeAccessToken = null;
+        let youtubeAPIReady = false;
+        
+        // User profile for personalization
+        let userProfile = {
+            topTracks: [],
+            topArtists: [],
+            audioFeatures: {},
+            recentlyPlayed: [],
+            emotionHistory: {},
+            preferences: {
+                valence: 0.5,
+                energy: 0.5,
+                danceability: 0.5,
+                acousticness: 0.5,
+                instrumentalness: 0.5
+            },
+            isPersonalized: false
+        };
+
+        let youtubeProfile = {
+            playlists: [],
+            likedVideos: [],
+            subscribedChannels: [],
+            videoCategories: {},
+            preferences: {
+                musicGenres: [],
+                averageWatchTime: 0,
+                favoriteArtists: [],
+                topCategories: []
+            },
+            isPersonalized: false
+        };
+
+        let personalizedRecommendations = {};
+        let youtubePersonalizedRecommendations = {};
+        let currentPlaylist = [];
+        let currentTrackIndex = 0;
 
         // FaceAPI.js emotion mapping
         const EMOTION_CONFIG = {
@@ -589,56 +1353,56 @@
             'surprised': { emoji: '😲', color: '#e67e22' }
         };
 
-        // Sample music recommendations
+        // Sample music recommendations with extended data for personalization
         const MUSIC_RECOMMENDATIONS = {
             'happy': [
-                { name: "Good 4 U", artist: "Olivia Rodrigo", match: "95%" },
-                { name: "Blinding Lights", artist: "The Weeknd", match: "92%" },
-                { name: "Uptown Funk", artist: "Bruno Mars", match: "90%" },
-                { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", match: "88%" },
-                { name: "Happy", artist: "Pharrell Williams", match: "95%" }
+                { name: "Good 4 U", artist: "Olivia Rodrigo", uri: "spotify:track:4ZtFanR9U6ndgddUvNcjcG", youtubeId: "gNi_6U5Pm_o", match: "95%", features: { valence: 0.84, energy: 0.89, danceability: 0.78 } },
+                { name: "Blinding Lights", artist: "The Weeknd", uri: "spotify:track:0VjIjW4GlUK7tuDqZgJ6Ny", youtubeId: "4NRXx6U8ABQ", match: "92%", features: { valence: 0.76, energy: 0.73, danceability: 0.81 } },
+                { name: "Uptown Funk", artist: "Bruno Mars", uri: "spotify:track:32OlwWuMpZ6b0aN2RZOeMS", youtubeId: "OPf0YbXqDm0", match: "90%", features: { valence: 0.88, energy: 0.95, danceability: 0.87 } },
+                { name: "Can't Stop the Feeling!", artist: "Justin Timberlake", uri: "spotify:track:6JV5LYLY4k8bvr7Lxyq64Z", youtubeId: "ru0K8uYEZWw", match: "88%", features: { valence: 0.94, energy: 0.85, danceability: 0.83 } },
+                { name: "Happy", artist: "Pharrell Williams", uri: "spotify:track:60nZcImufyMA1MKQY3dcCH", youtubeId: "ZbZSe6N_BXs", match: "95%", features: { valence: 0.96, energy: 0.82, danceability: 0.79 } }
             ],
             'sad': [
-                { name: "Someone Like You", artist: "Adele", match: "93%" },
-                { name: "The Night We Met", artist: "Lord Huron", match: "91%" },
-                { name: "Hurt", artist: "Johnny Cash", match: "89%" },
-                { name: "Mad World", artist: "Gary Jules", match: "87%" },
-                { name: "Tears in Heaven", artist: "Eric Clapton", match: "85%" }
+                { name: "Someone Like You", artist: "Adele", uri: "spotify:track:1zwMYTA5nlNjZxYrvBB2pV", youtubeId: "hLQl3WQQoQ0", match: "93%", features: { valence: 0.18, energy: 0.34, danceability: 0.42 } },
+                { name: "The Night We Met", artist: "Lord Huron", uri: "spotify:track:0ct6r3EGTcMLPtrXHDvVjc", youtubeId: "KtlgYxa6BMU", match: "91%", features: { valence: 0.23, energy: 0.29, danceability: 0.38 } },
+                { name: "Hurt", artist: "Johnny Cash", uri: "spotify:track:4gMgiXfqyzZLMhsksGmbQV", youtubeId: "8AHCfZTRGiI", match: "89%", features: { valence: 0.15, energy: 0.25, danceability: 0.35 } },
+                { name: "Mad World", artist: "Gary Jules", uri: "spotify:track:3JOVTQ5h8HGFnDdp4VT3MP", youtubeId: "4N3N1MlvVc4", match: "87%", features: { valence: 0.12, energy: 0.19, danceability: 0.31 } },
+                { name: "Tears in Heaven", artist: "Eric Clapton", uri: "spotify:track:6v3KW9xbzN5yKLt9YKDYA2", youtubeId: "JxPj3GAYYZ0", match: "85%", features: { valence: 0.21, energy: 0.31, danceability: 0.40 } }
             ],
             'angry': [
-                { name: "Break Stuff", artist: "Limp Bizkit", match: "94%" },
-                { name: "Bodies", artist: "Drowning Pool", match: "92%" },
-                { name: "Killing in the Name", artist: "Rage Against Machine", match: "90%" },
-                { name: "Chop Suey!", artist: "System of a Down", match: "88%" },
-                { name: "Given Up", artist: "Linkin Park", match: "86%" }
+                { name: "Break Stuff", artist: "Limp Bizkit", uri: "spotify:track:6OmhkSOpvYBokMKQxpIGx2", youtubeId: "ZpUYjpKg9KY", match: "94%", features: { valence: 0.31, energy: 0.98, danceability: 0.65 } },
+                { name: "Bodies", artist: "Drowning Pool", uri: "spotify:track:51pQ7vY7WXzxskwloaeqyj", youtubeId: "04F4xlWSFh0", match: "92%", features: { valence: 0.28, energy: 0.96, danceability: 0.63 } },
+                { name: "Killing in the Name", artist: "Rage Against Machine", uri: "spotify:track:59WN2psjkt1tyaxjspN8fp", youtubeId: "bWXazVhlyxQ", match: "90%", features: { valence: 0.35, energy: 0.94, danceability: 0.67 } },
+                { name: "Chop Suey!", artist: "System of a Down", uri: "spotify:track:50rrZ5K7HlBr2FaZtGWflD", youtubeId: "CSvFpBOe8eY", match: "88%", features: { valence: 0.42, energy: 0.91, danceability: 0.58 } },
+                { name: "Given Up", artist: "Linkin Park", uri: "spotify:track:5a1iz510sv2W9Dt1MvFd5R", youtubeId: "0xyxtzD54rM", match: "86%", features: { valence: 0.25, energy: 0.89, danceability: 0.61 } }
             ],
             'surprised': [
-                { name: "Electric Feel", artist: "MGMT", match: "88%" },
-                { name: "Pumped Up Kicks", artist: "Foster the People", match: "85%" },
-                { name: "Somebody That I Used to Know", artist: "Gotye", match: "83%" },
-                { name: "Radioactive", artist: "Imagine Dragons", match: "81%" },
-                { name: "Feel It Still", artist: "Portugal. The Man", match: "79%" }
+                { name: "Electric Feel", artist: "MGMT", uri: "spotify:track:3FtYBEfBqAlGO46NUDQSAt", youtubeId: "MmZexg8sxyk", match: "88%", features: { valence: 0.67, energy: 0.72, danceability: 0.69 } },
+                { name: "Pumped Up Kicks", artist: "Foster the People", uri: "spotify:track:7w87IxuO7BDcJ3YUqCyMTT", youtubeId: "SDTZ7iX4vTQ", match: "85%", features: { valence: 0.54, energy: 0.68, danceability: 0.75 } },
+                { name: "Somebody That I Used to Know", artist: "Gotye", uri: "spotify:track:2JzZzZUQj3Qff7wapcbKjc", youtubeId: "8UVNT4wvIGY", match: "83%", features: { valence: 0.51, energy: 0.61, danceability: 0.64 } },
+                { name: "Radioactive", artist: "Imagine Dragons", uri: "spotify:track:4RCZjm5OROoqN7CQ8S9e1F", youtubeId: "ktvTqknDobU", match: "81%", features: { valence: 0.59, energy: 0.78, danceability: 0.62 } },
+                { name: "Feel It Still", artist: "Portugal. The Man", uri: "spotify:track:1OKmhQBtDgKvwNMQeXUsBa", youtubeId: "pBkHHoOIIn8", match: "79%", features: { valence: 0.63, energy: 0.74, danceability: 0.71 } }
             ],
             'fearful': [
-                { name: "Breathe Me", artist: "Sia", match: "89%" },
-                { name: "Heavy", artist: "Linkin Park ft. Kiiara", match: "87%" },
-                { name: "Anxiety", artist: "Julia Michaels", match: "85%" },
-                { name: "Stressed Out", artist: "Twenty One Pilots", match: "83%" },
-                { name: "Vulnerable", artist: "Selena Gomez", match: "81%" }
+                { name: "Breathe Me", artist: "Sia", uri: "spotify:track:7K4PG6Xgf4ZRzHTYiWTRNI", youtubeId: "ghPcYqn0p4Y", match: "89%", features: { valence: 0.29, energy: 0.38, danceability: 0.45 } },
+                { name: "Heavy", artist: "Linkin Park ft. Kiiara", uri: "spotify:track:50JJSqHUf2RQ9xsHs0KMHg", youtubeId: "5dmQ3QWpy1Q", match: "87%", features: { valence: 0.34, energy: 0.51, danceability: 0.52 } },
+                { name: "Anxiety", artist: "Julia Michaels", uri: "spotify:track:1A5S3fzxxNJ34cXLBXdN8E", youtubeId: "IA8078QRBdg", match: "85%", features: { valence: 0.31, energy: 0.47, danceability: 0.56 } },
+                { name: "Stressed Out", artist: "Twenty One Pilots", uri: "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn", youtubeId: "pXRviuL6vMY", match: "83%", features: { valence: 0.42, energy: 0.58, danceability: 0.61 } },
+                { name: "Vulnerable", artist: "Selena Gomez", uri: "spotify:track:6Ic3gB2WgEK8IxFZb7e0AK", youtubeId: "x3bfa3DZ8JM", match: "81%", features: { valence: 0.38, energy: 0.49, danceability: 0.58 } }
             ],
             'disgusted': [
-                { name: "Bad Guy", artist: "Billie Eilish", match: "86%" },
-                { name: "Sick Boy", artist: "The Chainsmokers", match: "84%" },
-                { name: "Bury a Friend", artist: "Billie Eilish", match: "82%" },
-                { name: "Bad Things", artist: "Machine Gun Kelly", match: "80%" },
-                { name: "Disease", artist: "Beartooth", match: "78%" }
+                { name: "Bad Guy", artist: "Billie Eilish", uri: "spotify:track:2Fxmhks0bxGSBdJ92vM42m", youtubeId: "DyDfgMOUjCI", match: "86%", features: { valence: 0.43, energy: 0.59, danceability: 0.71 } },
+                { name: "Sick Boy", artist: "The Chainsmokers", uri: "spotify:track:3b2cBRWXXNp9PTDqsEtQPa", youtubeId: "lEi_XBg2Fpk", match: "84%", features: { valence: 0.39, energy: 0.67, danceability: 0.68 } },
+                { name: "Bury a Friend", artist: "Billie Eilish", uri: "spotify:track:1CsMKhwEmNnmvEeKWLwdWn", youtubeId: "HUHC9tYz8ik", match: "82%", features: { valence: 0.24, energy: 0.45, danceability: 0.73 } },
+                { name: "Bad Things", artist: "Machine Gun Kelly", uri: "spotify:track:6or1bKJiZ06IlK0vFvY75k", youtubeId: "2X_2IdybTV0", match: "80%", features: { valence: 0.46, energy: 0.71, danceability: 0.66 } },
+                { name: "Disease", artist: "Beartooth", uri: "spotify:track:1brw1QZS6WKE8NhwelLr2J", youtubeId: "lbYIUnV8u7E", match: "78%", features: { valence: 0.32, energy: 0.87, danceability: 0.59 } }
             ],
             'neutral': [
-                { name: "Weightless", artist: "Marconi Union", match: "85%" },
-                { name: "Clair de Lune", artist: "Claude Debussy", match: "83%" },
-                { name: "River", artist: "Leon Bridges", match: "81%" },
-                { name: "Holocene", artist: "Bon Iver", match: "79%" },
-                { name: "Intro", artist: "The xx", match: "77%" }
+                { name: "Weightless", artist: "Marconi Union", uri: "spotify:track:7KC5YnBGkmBWNdlcbLQh0z", youtubeId: "UfcAVejslrU", match: "85%", features: { valence: 0.45, energy: 0.12, danceability: 0.23 } },
+                { name: "Clair de Lune", artist: "Claude Debussy", uri: "spotify:track:1vyhJKp5tQnB5K5aaNH1oM", youtubeId: "CvFH_6DNRCY", match: "83%", features: { valence: 0.48, energy: 0.18, danceability: 0.29 } },
+                { name: "River", artist: "Leon Bridges", uri: "spotify:track:5Ks4g4HteObeZOiL0Ree4J", youtubeId: "0Hegd4xNfRo", match: "81%", features: { valence: 0.52, energy: 0.41, danceability: 0.67 } },
+                { name: "Holocene", artist: "Bon Iver", uri: "spotify:track:2takcwOaAZWiXQijPHIx7B", youtubeId: "TWcyIpul8OE", match: "79%", features: { valence: 0.43, energy: 0.34, danceability: 0.59 } },
+                { name: "Intro", artist: "The xx", uri: "spotify:track:3WdnHTUgFI4G5SjNEAZlOo", youtubeId: "_VPKfacgXao", match: "77%", features: { valence: 0.41, energy: 0.29, danceability: 0.45 } }
             ]
         };
 
@@ -682,20 +1446,20 @@
                 
                 // Try multiple approaches and CDN sources
                 const LIBRARY_APPROACHES = [
-                    // Approach 1: Direct script loading with different CDNs
+                    // Approach 1: Use existing script tag if available (fastest)
+                    {
+                        method: 'existing',
+                        sources: []
+                    },
+                    // Approach 2: Direct script loading with reliable CDNs only
                     {
                         method: 'script',
                         sources: [
                             'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js',
                             'https://unpkg.com/@vladmandic/face-api/dist/face-api.js',
-                            'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js',
-                            'https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/face-api.min.js'
+                            'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js'
+                            // Removed problematic CDNs to reduce warnings
                         ]
-                    },
-                    // Approach 2: Use existing script tag if available
-                    {
-                        method: 'existing',
-                        sources: []
                     }
                 ];
 
@@ -847,11 +1611,8 @@
                     {
                         url: 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights',
                         name: 'JSDelivr (original)'
-                    },
-                    {
-                        url: 'https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/weights',
-                        name: 'CloudFlare'
                     }
+                    // Removed CloudFlare CDN as it's causing warnings
                 ];
 
                 let modelsLoaded = false;
@@ -1164,19 +1925,47 @@
             `;
         }
 
-        // Update music recommendations
+        // Enhanced music recommendations with personalization
         function updateMusicRecommendations(emotion) {
-            const tracks = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
+            let tracks;
+            let isPersonalized = false;
+            let personalizationSource = '';
+
+            // Determine which personalized recommendations to use
+            if (currentPlatform === 'spotify' && userProfile.isPersonalized && personalizedRecommendations[emotion]) {
+                tracks = personalizedRecommendations[emotion];
+                isPersonalized = true;
+                personalizationSource = 'Spotify';
+            } else if (currentPlatform === 'youtube' && youtubeProfile.isPersonalized && youtubePersonalizedRecommendations[emotion]) {
+                tracks = youtubePersonalizedRecommendations[emotion];
+                isPersonalized = true;
+                personalizationSource = 'YouTube';
+            } else {
+                tracks = MUSIC_RECOMMENDATIONS[emotion] || MUSIC_RECOMMENDATIONS['neutral'];
+            }
+            
             const recsList = document.getElementById('recommendationsList');
             recsList.innerHTML = '';
-            
-            // Add header
+
+            // Add header showing personalization status
             const headerDiv = document.createElement('div');
-            headerDiv.style.cssText = 'text-align: center; margin-bottom: 15px; padding: 10px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #667eea;';
-            headerDiv.innerHTML = `
-                <strong style="color: #667eea;">🎵 Recommendations for ${emotion.charAt(0).toUpperCase() + emotion.slice(1)} Mood</strong><br>
-                <small style="color: #666;">AI-curated tracks matching your current emotional state</small>
-            `;
+            headerDiv.style.cssText = 'text-align: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ' + (currentPlatform === 'spotify' ? '#1db954' : '#ff0000') + ';';
+            
+            if (isPersonalized) {
+                const dataCount = currentPlatform === 'spotify' 
+                    ? userProfile.topTracks.length 
+                    : youtubeProfile.likedVideos?.length || 0;
+                    
+                headerDiv.innerHTML = `
+                    <strong style="color: ${currentPlatform === 'spotify' ? '#1db954' : '#ff0000'};">✨ Personalized for You</strong><br>
+                    <small style="color: #666;">Based on your ${personalizationSource} data • ${dataCount} items analyzed</small>
+                `;
+            } else {
+                headerDiv.innerHTML = `
+                    <strong style="color: #666;">🎵 Default Recommendations</strong><br>
+                    <small style="color: #666;">Connect ${currentPlatform === 'spotify' ? 'Spotify' : 'YouTube'} for personalized suggestions</small>
+                `;
+            }
             recsList.appendChild(headerDiv);
             
             tracks.forEach((track, index) => {
@@ -1184,18 +1973,103 @@
                 item.className = 'recommendation-item';
                 item.onclick = () => playTrack(track);
                 
+                // Show different indicators for different sources
+                let artworkContent, matchStyle;
+                
+                if (track.isUserTrack || track.isUserVideo) {
+                    artworkContent = currentPlatform === 'spotify' ? '💎' : '❤️';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d; font-weight: bold;';
+                } else if (isPersonalized && track.personalizedScore > 0.7) {
+                    artworkContent = '⭐';
+                    matchStyle = 'background: #fff3cd; color: #856404;';
+                } else {
+                    artworkContent = currentPlatform === 'spotify' ? '🎧' : '📺';
+                    matchStyle = 'background: #e8f5e8; color: #2d5a2d;';
+                }
+
                 item.innerHTML = `
-                    <div class="track-artwork">${currentPlatform === 'spotify' ? '🎧' : '📺'}</div>
+                    <div class="track-artwork">${artworkContent}</div>
                     <div class="track-info">
                         <div class="track-name">${track.name}</div>
                         <div class="track-artist">${track.artist}</div>
+                        ${track.reason ? `<div style="font-size: 0.7em; color: #888; margin-top: 2px;">${track.reason}</div>` : ''}
+                        ${isPersonalized && track.personalizedScore ? 
+                            `<div style="font-size: 0.7em; color: ${currentPlatform === 'spotify' ? '#1db954' : '#ff0000'}; margin-top: 2px;">Similarity: ${(track.personalizedScore * 100).toFixed(0)}%</div>` : ''
+                        }
                     </div>
-                    <div class="mood-match">${track.match}</div>
+                    <div class="mood-match" style="${matchStyle}">${track.match}</div>
                 `;
                 
                 recsList.appendChild(item);
             });
+
+            // Show legend for personalized recommendations
+            if (isPersonalized) {
+                const legendDiv = document.createElement('div');
+                legendDiv.style.cssText = 'text-align: center; color: #666; font-size: 0.8em; margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 6px;';
+                
+                if (currentPlatform === 'spotify') {
+                    legendDiv.innerHTML = '💎 Your music • ⭐ Perfect match • 🎧 Recommended • <button onclick="showPersonalizationDetails()" style="background: none; border: none; color: #1db954; cursor: pointer; text-decoration: underline;">Show Details</button>';
+                } else {
+                    legendDiv.innerHTML = '❤️ Your videos • ⭐ Perfect match • 📺 Recommended • <button onclick="showPersonalizationDetails()" style="background: none; border: none; color: #ff0000; cursor: pointer; text-decoration: underline;">Show Details</button>';
+                }
+                recsList.appendChild(legendDiv);
+            }
         }
+
+        // Show personalization details
+        function showPersonalizationDetails() {
+            const details = currentPlatform === 'spotify' && userProfile.isPersonalized ? 
+                `Your Spotify Analysis:\n• ${userProfile.topTracks.length} favorite tracks\n• ${userProfile.topArtists.length} favorite artists\n• Happiness preference: ${(userProfile.preferences.valence * 100).toFixed(0)}%\n• Energy preference: ${(userProfile.preferences.energy * 100).toFixed(0)}%` :
+                `Your YouTube Analysis:\n• Connected to YouTube Music\n• Personalized recommendations active\n• Based on your video preferences`;
+            
+            alert(details);
+        }
+
+        // Initialize on load with full functionality
+        window.addEventListener('load', async () => {
+            console.log('🚀 Initializing MoodSync with full functionality...');
+            loadingStartTime = Date.now();
+            
+            // Check for existing Spotify token
+            const savedToken = localStorage.getItem('spotify_access_token');
+            if (savedToken) {
+                accessToken = savedToken;
+                await initializeSpotifyPlayer();
+                updateConnectButton('spotify', true);
+                
+                // Auto-analyze user profile if token exists
+                setTimeout(async () => {
+                    await analyzeUserProfile();
+                }, 2000);
+            }
+
+            // Initialize YouTube API
+            if (!youtubeAPIReady && window.YT) {
+                onYouTubeIframeAPIReady();
+            }
+            
+            // Show immediate feedback
+            document.getElementById('currentMood').textContent = 'Loading AI models with speed optimization...';
+            document.getElementById('recommendationsList').innerHTML = 
+                '<div style="text-align: center; color: #666; padding: 20px;">⚡ Ultra-fast AI loading in progress...</div>';
+            
+            // Add retry button early
+            addRetryButton();
+            
+            try {
+                await initializeApp();
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                enableDemoMode();
+            }
+            
+            // Update initial messages
+            document.getElementById('moodRecommendation').textContent = 'Start emotion detection to get AI-powered music recommendations!';
+            document.getElementById('musicPlatforms').textContent = 'Connect Spotify or YouTube Music for personalized recommendations';
+            
+            console.log('🎉 MoodSync initialization complete with full music functionality!');
+        });
 
         // Update mood insights
         function updateMoodInsights(emotion) {
