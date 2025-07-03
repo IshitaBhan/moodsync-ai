@@ -1141,7 +1141,8 @@
 
         function checkExistingConnections() {
             // Note: Using variables instead of localStorage for artifact compatibility
-            if (false) { // placeholder for localStorage check
+            const spotifyToken = sessionStorage.getItem('spotify_access_token');
+            if (spotifyToken) {
                 document.getElementById('spotifyConnect').textContent = '🎧 Spotify Connected';
                 document.getElementById('spotifyConnect').disabled = true;
                 updateStatus('✅ Spotify reconnected from saved session', 'active');
