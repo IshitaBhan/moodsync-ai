@@ -1063,50 +1063,55 @@ window.history.replaceState({}, document.title, window.location.pathname);
 
                 <div id="recommendationsList">
                     <div style="text-align: center; color: #666; padding: 20px;">
-                        AI loading... Music recommendations coming soon
+                        Click an emotion above to see music recommendations
                     </div>
+                </div>
+
+                <!-- Connection Status -->
+                <div id="connectionStatus" style="text-align: center; padding: 10px; margin: 10px 0; background: #f0f8ff; border-radius: 8px; font-size: 0.9em;">
+                    🎵 Connect a music service above for streaming and personalization
                 </div>
 
                 <!-- Spotify Player Controls -->
-                <div id="spotifyPlayerControls" class="player-controls">
+                <div id="spotifyPlayerControls" class="player-controls" style="display: none;">
                     <div class="now-playing">
-                        <img id="trackCover" class="track-cover" src="" alt="Track Cover">
-                        <div>
-                            <div id="trackName" style="font-weight: 600; font-size: 0.9em;">No track selected</div>
+                        <img id="trackCover" class="track-cover" src="" alt="Track Cover" style="width: 50px; height: 50px; border-radius: 6px; background: #f0f0f0;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div id="trackName" style="font-weight: 600; font-size: 0.9em; margin-bottom: 2px;">No track selected</div>
                             <div id="trackArtist" style="color: #666; font-size: 0.8em;">Spotify Player</div>
                         </div>
                     </div>
-                    <div class="playback-controls">
-                        <button class="playback-btn" onclick="previousTrack()">⏮️ Prev</button>
-                        <button class="playback-btn" onclick="togglePlayback()" id="playPauseBtn">▶️ Play</button>
-                        <button class="playback-btn" onclick="nextTrack()">⏭️ Next</button>
+                    <div class="playback-controls" style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                        <button class="playback-btn" onclick="previousTrack()" style="background: #1db954; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="togglePlayback()" id="playPauseBtn" style="background: #1db954; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">▶️ Play</button>
+                        <button class="playback-btn" onclick="nextTrack()" style="background: #1db954; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">⏭️ Next</button>
                     </div>
                 </div>
 
-                <!-- YouTube Player -->
-                <div id="youtubePlayerContainer" class="youtube-player-container">
-                    <div id="youtubePlayer"></div>
-                    <div id="youtubeOverlay" class="youtube-overlay">
-                        <div class="yt-info">
-                            <div class="yt-title" id="ytTitle">Select a song to play</div>
-                            <div class="yt-artist" id="ytArtist">YouTube Music Player</div>
+                <!-- YouTube Player Container -->
+                <div id="youtubePlayerContainer" class="youtube-player-container" style="position: relative; margin-top: 15px; border-radius: 10px; overflow: hidden; display: none;">
+                    <div id="youtubePlayer" style="width: 100%; height: 300px;"></div>
+                    <div id="youtubeOverlay" class="youtube-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 10px;">
+                        <div class="yt-info" style="text-align: center; color: white;">
+                            <div class="yt-title" id="ytTitle" style="font-weight: 600; margin-bottom: 5px;">Select a song to play</div>
+                            <div class="yt-artist" id="ytArtist" style="font-size: 0.9em; opacity: 0.8;">YouTube Music Player</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- YouTube Controls -->
-                <div id="youtubePlayerControls" class="player-controls youtube-controls">
+                <div id="youtubePlayerControls" class="player-controls youtube-controls" style="display: none;">
                     <div class="now-playing">
-                        <div class="track-cover" style="background: #ff0000; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">▶️</div>
-                        <div>
-                            <div id="ytCurrentTitle" style="font-weight: 600; font-size: 0.9em;">No track selected</div>
+                        <div class="track-cover" style="width: 50px; height: 50px; background: #ff0000; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-radius: 6px;">▶️</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div id="ytCurrentTitle" style="font-weight: 600; font-size: 0.9em; margin-bottom: 2px;">No track selected</div>
                             <div id="ytCurrentArtist" style="color: #666; font-size: 0.8em;">YouTube Music</div>
                         </div>
                     </div>
-                    <div class="playback-controls">
-                        <button class="playback-btn" onclick="ytPreviousTrack()">⏮️ Prev</button>
-                        <button class="playback-btn" onclick="ytTogglePlayback()" id="ytPlayPauseBtn">▶️ Play</button>
-                        <button class="playback-btn" onclick="ytNextTrack()">⏭️ Next</button>
+                    <div class="playback-controls" style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                        <button class="playback-btn" onclick="ytPreviousTrack()" style="background: #ff0000; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">⏮️ Prev</button>
+                        <button class="playback-btn" onclick="ytTogglePlayback()" id="ytPlayPauseBtn" style="background: #ff0000; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">▶️ Play</button>
+                        <button class="playback-btn" onclick="ytNextTrack()" style="background: #ff0000; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8em;">⏭️ Next</button>
                     </div>
                 </div>
             </div>
